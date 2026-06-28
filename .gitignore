@@ -1,0 +1,5 @@
+bin/
+*.exe
+*.sl2
+memory.dat
+*.bak
