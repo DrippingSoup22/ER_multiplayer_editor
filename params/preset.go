@@ -1,4 +1,4 @@
-package app
+package params
 
 import "er_pvp_mod/core"
 
@@ -19,8 +19,7 @@ type PresetMeta struct {
 var invaderPresets = []PresetMeta{
 	{
 		Key: "vanilla", View: ViewInvader, Label: "Vanilla",
-		Description: "The unmodified FromSoftware defaults. Use this to return all invasion settings to exactly how the game shipped.\r\n\r\n" +
-			"Target list: 5 | Search interval: 30 s | Request timeout: 20 s | Area count: 5",
+		Description: "The unmodified FromSoftware defaults. Use this to return all invasion settings to exactly how the game shipped.",
 		Apply: func(v core.NetworkParamValues) core.NetworkParamValues {
 			d := core.NetworkParamDefaults()
 			v.MaxBreakInTargetListCount = d.MaxBreakInTargetListCount
@@ -32,12 +31,11 @@ var invaderPresets = []PresetMeta{
 	},
 	{
 		Key: "fast", View: ViewInvader, Label: "Fast",
-		Description: "Noticeably faster invasions optimised for same-region play, with server load in mind.\r\n\r\n" +
-			"Search interval drops from 30 s to 8 s so the client checks for available hosts nearly four times as often without flooding the server. " +
-			"The candidate list grows to 12, giving each search more options before the cycle restarts. " +
-			"Timeout holds at 10 s — generous for same-region handshakes (which complete in 2–5 s) while promptly dropping dead sessions. " +
-			"Area count widens to 10 for better map coverage, helping in less-populated late-game zones.\r\n\r\n" +
-			"Target list: 12 | Search interval: 8 s | Request timeout: 10 s | Area count: 10",
+		Description: "A meaningful step up from vanilla, balanced to remain server-friendly while noticeably cutting wait times.\r\n\r\n" +
+			"The search interval is substantially shorter, so the game checks for newly eligible hosts far more often. " +
+			"The candidate list is larger, giving each round more options before the cycle has to restart. " +
+			"The timeout is tightened: same-region connections complete well within the new window, while genuinely stalled sessions are recycled sooner. " +
+			"Geographic coverage is widened to maintain reasonable candidate lists in less-populated areas.",
 		Apply: func(v core.NetworkParamValues) core.NetworkParamValues {
 			v.MaxBreakInTargetListCount = 12
 			v.BreakInRequestIntervalTimeSec = 8.0
@@ -48,12 +46,11 @@ var invaderPresets = []PresetMeta{
 	},
 	{
 		Key: "aggressive", View: ViewInvader, Label: "Aggressive",
-		Description: "Maximum invasion frequency — pushed to the practical speed ceiling for same-region play.\r\n\r\n" +
-			"Search interval drops to 4 s, near the floor where the server's own round-trip time becomes the bottleneck. " +
-			"The full 20-candidate list is requested each time so no eligible host is missed. " +
-			"Timeout tightens to 6 s — same-region connections typically complete in 2–4 s, so 6 s remains reliable while aggressively recycling dead slots. " +
-			"Area count raised to 20 for the broadest practical geographic coverage.\r\n\r\n" +
-			"Target list: 20 | Search interval: 4 s | Request timeout: 6 s | Area count: 20",
+		Description: "The practical ceiling for same-region play, prioritising invasion frequency above all else.\r\n\r\n" +
+			"The search interval approaches the floor where server response time becomes the bottleneck rather than the wait. " +
+			"The maximum candidate list is requested every cycle so no eligible host is ever missed in a single pass. " +
+			"The timeout is tight enough to recycle dead sessions quickly while still allowing typical same-region connections to complete. " +
+			"Geographic coverage is set to the widest practical scope.",
 		Apply: func(v core.NetworkParamValues) core.NetworkParamValues {
 			v.MaxBreakInTargetListCount = 20
 			v.BreakInRequestIntervalTimeSec = 4.0
@@ -71,8 +68,7 @@ var invaderPresets = []PresetMeta{
 var signPresets = []PresetMeta{
 	{
 		Key: "vanilla", View: ViewSign, Label: "Vanilla",
-		Description: "The unmodified FromSoftware defaults. Use this to restore all summon-sign settings to their shipped state.\r\n\r\n" +
-			"Summon timeout: 45 s | Refresh: 60 s | Pool: 20 | Upload interval: 30 s | Download span: 30 s | Upload span: 60 s",
+		Description: "The unmodified FromSoftware defaults. Use this to restore all summon-sign settings to their shipped state.",
 		Apply: func(v core.NetworkParamValues) core.NetworkParamValues {
 			d := core.NetworkParamDefaults()
 			v.SummonTimeoutTime = d.SummonTimeoutTime
@@ -89,13 +85,12 @@ var signPresets = []PresetMeta{
 	},
 	{
 		Key: "fast", View: ViewSign, Label: "Fast",
-		Description: "Significantly more responsive sign pool for active co-op, with moderate server impact.\r\n\r\n" +
-			"Refresh interval drops from 60 s to 15 s so new signs appear four times as fast. " +
-			"The sign pool doubles to 40 for better coverage in busy areas. " +
-			"All background sync intervals (download, upload, heartbeat) tighten to 15–20 s. " +
-			"Summon timeout cut from 45 s to 20 s — same-region connections complete in 2–8 s so 20 s is still comfortable while making stuck loading screens resolve much faster. " +
-			"Advanced pool parameters scale to maintain the invariant: cell ≤ total ≤ buffer.\r\n\r\n" +
-			"Refresh: 15 s | Pool: 40 | Upload interval: 15 s | Download: 15 s | Upload span: 20 s | Summon timeout: 20 s",
+		Description: "A substantial improvement for active co-op, designed to feel responsive without generating excessive server traffic.\r\n\r\n" +
+			"The sign pool is doubled so busy areas show far more options simultaneously. " +
+			"The full refresh cycle is significantly shortened so new signs appear quickly after being placed and stale ones vanish promptly. " +
+			"Background sync intervals and the sign heartbeat are tightened to keep the pool current and your own placed sign reliably registered. " +
+			"The summon timeout is reduced so stuck loading screens resolve noticeably faster while same-region connections still have ample time to complete. " +
+			"All pool parameters are scaled together to maintain the required invariant.",
 		Apply: func(v core.NetworkParamValues) core.NetworkParamValues {
 			v.SummonTimeoutTime = 20.0
 			v.ReloadSignIntervalTime1 = 15.0
@@ -111,12 +106,10 @@ var signPresets = []PresetMeta{
 	},
 	{
 		Key: "aggressive", View: ViewSign, Label: "Aggressive",
-		Description: "Near real-time sign pool — maximum speed, minimum wasted time.\r\n\r\n" +
-			"All refresh and sync intervals align at 8 s, below which the server cannot supply meaningfully different data between cycles. " +
-			"The pool expands to 64 for the densest co-op areas. " +
-			"Summon timeout cut to 8 s — same-region connections always complete well within this window; any attempt still pending after 8 s has almost certainly failed and is just wasting the slot. " +
-			"Advanced pool parameters scale to maintain the invariant: cell ≤ total ≤ buffer.\r\n\r\n" +
-			"Refresh: 8 s | Pool: 64 | Upload interval: 8 s | Download: 8 s | Upload span: 8 s | Summon timeout: 8 s",
+		Description: "Near real-time sign responsiveness — all timers aligned at the practical floor below which the server cannot supply meaningfully different data between cycles.\r\n\r\n" +
+			"The pool is expanded to its practical maximum to accommodate the densest co-op areas. " +
+			"The summon timeout is cut to a short window — same-region connections always complete well within it, and anything still pending beyond that point has almost certainly failed and is just occupying a slot. " +
+			"All pool parameters are scaled together to maintain the required invariant.",
 		Apply: func(v core.NetworkParamValues) core.NetworkParamValues {
 			v.SummonTimeoutTime = 8.0
 			v.ReloadSignIntervalTime1 = 8.0
@@ -139,8 +132,7 @@ var signPresets = []PresetMeta{
 var hunterPresets = []PresetMeta{
 	{
 		Key: "vanilla", View: ViewHunter, Label: "Vanilla",
-		Description: "The unmodified FromSoftware defaults. Use this to restore all Hunter / Blue Cipher Ring settings to their shipped state.\r\n\r\n" +
-			"Cooldown: 20 s | List: 5 | Search: 30–180 s (avg 105 s) | All-area: 30 %",
+		Description: "The unmodified FromSoftware defaults. Use this to restore all Hunter and Blue Cipher Ring settings to their shipped state.",
 		Apply: func(v core.NetworkParamValues) core.NetworkParamValues {
 			d := core.NetworkParamDefaults()
 			v.ReloadVisitListCoolTime = d.ReloadVisitListCoolTime
@@ -156,12 +148,11 @@ var hunterPresets = []PresetMeta{
 	},
 	{
 		Key: "fast", View: ViewHunter, Label: "Fast",
-		Description: "Noticeably faster Hunter dispatch, mindful of server load.\r\n\r\n" +
-			"The main cooldown drops from 20 s to 8 s so the client re-checks for invaded worlds 2.5 times as often. " +
-			"The candidate list grows to 12 for more options per cycle. " +
-			"The randomised search interval compresses to 10–45 s, cutting the average wait from ~105 s to ~27 s. " +
-			"All-area rate rises to 60 % so the majority of searches cover the full map without always going global.\r\n\r\n" +
-			"Cooldown: 8 s | List: 12 | Search: 10–45 s (avg 27 s) | All-area: 60 %",
+		Description: "A noticeably more active Hunter experience, balanced to remain mindful of server load.\r\n\r\n" +
+			"The polling cooldown is reduced so the game checks for available invasions significantly more often. " +
+			"The candidate list is enlarged for more options to attempt per cycle. " +
+			"The randomised search interval is compressed to a tighter range, cutting the average wait between dispatch attempts to a fraction of the vanilla value. " +
+			"The all-area rate is raised so that more searches cover the full map, improving dispatch rates when local invasion activity is low.",
 		Apply: func(v core.NetworkParamValues) core.NetworkParamValues {
 			v.ReloadVisitListCoolTime = 8.0
 			v.MaxVisitListCount = 12
@@ -173,12 +164,11 @@ var hunterPresets = []PresetMeta{
 	},
 	{
 		Key: "aggressive", View: ViewHunter, Label: "Aggressive",
-		Description: "Maximum Hunter dispatch speed — pushed to the practical ceiling.\r\n\r\n" +
-			"Cooldown drops to 3 s, near the floor before the server's own processing time dominates. " +
-			"The random search interval compresses to 3–15 s, cutting the average wait from ~105 s to ~9 s — roughly 12x faster than vanilla. " +
-			"Candidate list raised to 20 for maximum coverage per cycle. " +
-			"All-area rate set to 80 % for near-global coverage without always forcing a full-map search.\r\n\r\n" +
-			"Cooldown: 3 s | List: 20 | Search: 3–15 s (avg 9 s) | All-area: 80 %",
+		Description: "Maximum dispatch frequency — pushed to the practical ceiling for most configurations.\r\n\r\n" +
+			"The polling cooldown approaches the point where server processing time becomes the limiting factor rather than the wait itself. " +
+			"The randomised search interval is compressed to a very tight range, cutting the average wait between attempts to a small fraction of the vanilla value. " +
+			"The candidate list is set to its practical maximum for the best coverage per cycle. " +
+			"The all-area rate is raised high enough to ensure near-global coverage on most searches without forcing every single cycle to go fully global.",
 		Apply: func(v core.NetworkParamValues) core.NetworkParamValues {
 			v.ReloadVisitListCoolTime = 3.0
 			v.MaxVisitListCount = 20
@@ -197,8 +187,7 @@ var hunterPresets = []PresetMeta{
 var tonguePresets = []PresetMeta{
 	{
 		Key: "vanilla", View: ViewTongue, Label: "Vanilla",
-		Description: "The unmodified FromSoftware defaults. Use this to restore Taunter's Tongue settings to their shipped state.\r\n\r\n" +
-			"Visitor list: 10 | Timeout: 60 s | Download span: 60 s",
+		Description: "The unmodified FromSoftware defaults. Use this to restore Taunter's Tongue settings to their shipped state.",
 		Apply: func(v core.NetworkParamValues) core.NetworkParamValues {
 			d := core.NetworkParamDefaults()
 			v.VisitorListMax = d.VisitorListMax
@@ -210,10 +199,9 @@ var tonguePresets = []PresetMeta{
 	{
 		Key: "fast", View: ViewTongue, Label: "Fast",
 		Description: "More frequent invasions while remaining server-friendly.\r\n\r\n" +
-			"The visitor list doubles to 20 for more candidates per cycle. " +
-			"Timeout drops from 60 s to 15 s — same-region invaders connect in 2–5 s so 15 s is still comfortable while dropping failed slots much faster than vanilla. " +
-			"Download span drops to 15 s so the candidate list stays current and stale entries are replaced quickly.\r\n\r\n" +
-			"Visitor list: 20 | Timeout: 15 s | Download span: 15 s",
+			"The candidate pool is doubled for more connection attempts per cycle, reducing the chance of exhausting the list without finding a match. " +
+			"The connection timeout is significantly reduced — same-region invaders establish well within the new window, while failed slots are recycled much faster than vanilla. " +
+			"The list refresh interval is shortened to keep the candidate pool current and minimise wasted attempts on stale entries.",
 		Apply: func(v core.NetworkParamValues) core.NetworkParamValues {
 			v.VisitorListMax = 20
 			v.VisitorTimeOutTime = 15.0
@@ -224,10 +212,9 @@ var tonguePresets = []PresetMeta{
 	{
 		Key: "aggressive", View: ViewTongue, Label: "Aggressive",
 		Description: "Maximum invasion rate — pushed to the practical speed ceiling for same-region play.\r\n\r\n" +
-			"Visitor list raised to 30 for the largest candidate pool per cycle. " +
-			"Timeout cut to 6 s — same-region connections always establish within this window; any slot still pending at 6 s is almost certainly dead and is recycled immediately. " +
-			"Download span drops to 8 s for a near real-time candidate list with minimal staleness.\r\n\r\n" +
-			"Visitor list: 30 | Timeout: 6 s | Download span: 8 s",
+			"The candidate pool is raised to its largest practical size for the best coverage per cycle. " +
+			"The connection timeout is cut to a short window — same-region invaders always establish within it, and any slot still pending beyond that point is almost certainly dead. " +
+			"The list refreshes frequently enough that staleness is rarely a factor even during the most active PvP sessions.",
 		Apply: func(v core.NetworkParamValues) core.NetworkParamValues {
 			v.VisitorListMax = 30
 			v.VisitorTimeOutTime = 6.0

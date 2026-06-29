@@ -1,4 +1,4 @@
-package app
+package windows
 
 import (
 	"encoding/binary"
@@ -19,7 +19,6 @@ const (
 type inputKind string
 
 const (
-	kindRawUD11 inputKind = "raw-ud11"
 	kindPS4Full inputKind = "ps4-memory-dat"
 	kindPCFull  inputKind = "pc-sl2"
 )
@@ -110,14 +109,6 @@ func loadInputAuto(path string) (*loadedInput, error) {
 		return nil, err
 	}
 
-	// Raw USERDATA11 blob (extracted slot file).
-	if vals, err := tryReadNetworkParams(data); err == nil && vals != nil {
-		return &loadedInput{
-			kind: kindRawUD11, data: data, ud11: data,
-			ud11Off: 0, ud11End: len(data), path: path,
-		}, nil
-	}
-
 	// PC save (.sl2): BND4 container with USERDATA slot entries.
 	if len(data) >= 4 && string(data[:4]) == "BND4" {
 		if in, err := loadPCSave(path, data); err == nil {
@@ -138,7 +129,7 @@ func loadInputAuto(path string) (*loadedInput, error) {
 		}
 	}
 
-	return nil, fmt.Errorf("unsupported or unrecognized save format: could not parse as raw USERDATA11, PC save (.sl2), or PS4 memory.dat")
+	return nil, fmt.Errorf("unsupported or unrecognized save format: expected a PC save (ER0000.sl2) or PS4 save (memory.dat)")
 }
 
 func defaultEditedFilename(path string) string {
@@ -152,14 +143,9 @@ func writePatchedOutput(loaded *loadedInput, patch core.NetworkParamValues, outP
 		return nil, err
 	}
 
-	var out []byte
-	if loaded.kind == kindRawUD11 {
-		out = patchedUD11
-	} else {
-		out = make([]byte, len(loaded.data))
-		copy(out, loaded.data)
-		copy(out[loaded.ud11Off:loaded.ud11End], patchedUD11)
-	}
+	out := make([]byte, len(loaded.data))
+	copy(out, loaded.data)
+	copy(out[loaded.ud11Off:loaded.ud11End], patchedUD11)
 
 	if err := os.WriteFile(outPath, out, 0644); err != nil {
 		return nil, err
