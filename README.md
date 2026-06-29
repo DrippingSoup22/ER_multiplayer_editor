@@ -21,6 +21,8 @@ This tool reads those values, lets you change them through a guided interface, a
 | PC save | `ER0000.sl2` | Windows / Steam |
 | PS4 save | `memory.dat` | PlayStation 4 |
 
+> **PC note:** the tool reads and writes PC saves correctly at the file level, but whether the game actually uses modified network parameters at runtime on PC is unconfirmed. Parameter changes have been verified to work on PS4. If you test this on PC, feedback is welcome.
+
 ---
 
 ## Features
