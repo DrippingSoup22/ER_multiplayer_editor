@@ -1,9 +1,10 @@
-package app
+package params
 
 import (
 	"er_pvp_mod/core"
 	"fmt"
 	"strconv"
+	"strings"
 )
 
 // ParamView identifies which player-role tab is active.
@@ -14,6 +15,16 @@ const (
 	ViewSign    ParamView = "sign"
 	ViewHunter  ParamView = "hunter"
 	ViewTongue  ParamView = "tongue"
+)
+
+// Confidence describes how well-established a parameter's in-game effect is.
+// Confirmed is the zero value so it need not be set explicitly in param literals.
+type Confidence int
+
+const (
+	Confirmed        Confidence = iota // effect well-understood; consistent with community findings
+	CommunityInferred                  // effect inferred from community testing; not officially documented
+	Unconfirmed                        // effect uncertain; parameter may be vestigial or untested in ER
 )
 
 // ParamMeta describes a single tunable field: its labels, documentation, casual and advanced
@@ -35,6 +46,14 @@ type ParamMeta struct {
 	// Advanced-mode slider bounds (datatype-safe maximum freedom).
 	AdvancedMin float64
 	AdvancedMax float64
+
+	// Confidence describes how well-established this parameter's effect is.
+	// Defaults to Confirmed (zero value) — only set explicitly for non-confirmed params.
+	Confidence Confidence
+
+	// Warning is an optional operational caveat shown prominently in the doc panel.
+	// Use for cross-field constraints, server-side overrides, or known limitations.
+	Warning string
 
 	ShortDef        string // shown always; covers the essence + raise/lower summary
 	LongDef         string // shown always; full plain-English explanation
@@ -69,10 +88,31 @@ func (p ParamMeta) DocText(advanced bool) string {
 	if p.Key == "" {
 		return ""
 	}
-	const divider = "─────────────────────────────────────\r\n\r\n"
-	s := p.Label + "\r\n\r\n" + p.ShortDef + "\r\n\r\n" + divider + p.LongDef
+	const sep = "· · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · ·\r\n\r\n"
+
+	// Confidence / warning block — metadata displayed immediately after the name.
+	var meta string
+	switch p.Confidence {
+	case CommunityInferred:
+		meta = "[ COMMUNITY-INFERRED ]\r\nEffect inferred from community testing — not officially documented.\r\n\r\n"
+	case Unconfirmed:
+		meta = "[ UNCONFIRMED ]\r\nIn-game effect uncertain or untested in Elden Ring.\r\n\r\n"
+	}
+	if p.Warning != "" {
+		meta += "⚠  WARNING\r\n" + p.Warning + "\r\n\r\n"
+	}
+
+	// Separate the raise/lower direction lines from the description sentence.
+	shortDef := strings.ReplaceAll(p.ShortDef, "\r\nRaise →", "\r\n\r\nRaise →")
+	shortDef = strings.ReplaceAll(shortDef, "\r\nSet to 0 →", "\r\n\r\nSet to 0 →")
+
+	s := strings.ToUpper(p.Label) + "\r\n\r\n" +
+		meta +
+		sep + "[SHORT DEFINITION]\r\n\r\n" + shortDef + "\r\n\r\n" +
+		sep + "[LONG DEFINITION]\r\n\r\n" + p.LongDef
+
 	if advanced && p.AdvancedDetails != "" {
-		s += "\r\n\r\n── Advanced Details ──\r\n\r\n" + p.AdvancedDetails
+		s += "\r\n\r\n" + sep + "[ADVANCED DETAILS]\r\n\r\n" + p.AdvancedDetails
 	}
 	return s
 }

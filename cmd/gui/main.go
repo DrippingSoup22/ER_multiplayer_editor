@@ -3,11 +3,11 @@ package main
 import (
 	"log"
 
-	"er_pvp_mod/app"
+	"er_pvp_mod/ui/windows"
 )
 
 func main() {
-	if err := app.RunGUI(); err != nil {
+	if err := windows.RunGUI(); err != nil {
 		log.Fatal(err)
 	}
 }

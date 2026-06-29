@@ -12,7 +12,7 @@ dirs:
 
 gui: dirs
 	CC=$(WIN_CC) GOOS=windows GOARCH=amd64 CGO_ENABLED=1 \
-	go build -ldflags="-H windowsgui" -o $(GUI_OUT) ./gui
+	go build -ldflags="-H windowsgui" -o $(GUI_OUT) ./cmd/gui
 
 clean:
 	rm -rf $(BIN_DIR)

@@ -20,26 +20,28 @@ This tool reads those values, lets you change them through a guided interface, a
 |--------|------|----------|
 | PC save | `ER0000.sl2` | Windows / Steam |
 | PS4 save | `memory.dat` | PlayStation 4 |
-| Raw USERDATA11 | any | Extracted slot (advanced) |
 
 ---
 
 ## Features
 
 - **4 parameter views** — Invader, Summoning Sign, Hunter, Taunter's Tongue
-- **27 tunable parameters** with plain-English documentation for every field
-- **Advanced mode** — unlocks additional parameters and removes the conservative slider limits; shows technical details (memory offsets, PARAMDEF IDs, cross-field constraints)
-- **3 presets per view** — Vanilla (exact game defaults), Fast, Aggressive
+- **27 tunable parameters** with plain-English documentation and confidence indicators for every field
+- **Scrollable parameter list** — mouse wheel supported; scrollbar appears automatically when a view has more parameters than fit at once
+- **Advanced mode** — reveals additional hidden parameters and shows technical documentation (memory offsets, PARAMDEF IDs, cross-field constraints)
+- **Unlock ranges** — available inside Advanced mode; disables all sliders and removes every numerical limit, allowing values to be entered freely via the edit fields
+- **3 presets per view** — Vanilla (exact game defaults), Fast, Aggressive; in basic mode, presets only affect visible parameters
 - **Non-destructive editing** — changes are staged in memory and only written on explicit save
 - **Current vs new** display — the left column always shows what is on disk; the right column shows your pending edits
+- **Save warning** — if you attempt to save a parameter whose in-game effect is unconfirmed, a confirmation prompt appears before the file picker
 
 ---
 
 ## How to use
 
 1. **Open your save file**
-   - Click **Browse…** and select your `ER0000.sl2` (PC), `memory.dat` (PS4), or a raw USERDATA11 extract
-   - The *Save type* indicator confirms the format was recognised
+   - Click **Browse…** and select your `ER0000.sl2` (PC) or `memory.dat` (PS4)
+   - The *Save type* indicator in the top bar confirms the format was recognised
 
 2. **Choose a view**
    - **Invader** — controls how often and how broadly the game searches for invasion targets
@@ -50,7 +52,7 @@ This tool reads those values, lets you change them through a guided interface, a
 3. **Edit values**
    - Drag a slider, type in an edit field, or pick a preset from the dropdown
    - Changes are previewed in the *New value* column without touching the file
-   - Click a parameter label or edit field to read its full documentation in the right panel
+   - Click a parameter name or edit field to read its full documentation in the right panel
    - Switch views freely — your edits persist across all views until you save
 
 4. **Commit and save**
@@ -61,13 +63,22 @@ This tool reads those values, lets you change them through a guided interface, a
 
 ## Advanced mode
 
-Click the **Advanced** checkbox (you will be shown a warning on first activation per session). Advanced mode:
+Click the **Advanced** checkbox. Advanced mode:
 
-- Reveals parameters not exposed by standard editors (summon timeout, inactive refresh timer, spatial cell ranges, bell-guard search rate)
-- Expands all slider limits to the datatype ceiling
-- Shows technical documentation (PARAMDEF SortID, memory offset, vanilla value, validation range, cross-field constraints)
+- Reveals parameters not exposed in standard view
+- Shows technical documentation for each field (PARAMDEF SortID, memory offset, vanilla value, validation range, cross-field constraints)
 
-> Advanced combinations can prevent multiplayer sessions from establishing. Test changes before distributing a patched file.
+> Advanced combinations can prevent multiplayer sessions from establishing. Keep a backup and test changes before distributing a patched file.
+
+### Unlock ranges
+
+When Advanced mode is on, an **Unlock ranges** checkbox appears. Enabling it:
+
+- Disables all sliders and removes every numerical limit
+- Values must be entered by typing directly into the edit fields
+- No upper or lower boundary applies
+
+> Values outside the tested ranges can produce undefined matchmaking behaviour or corrupt the parameter block. Apply the Vanilla preset at any time to restore safe defaults.
 
 ---
 
@@ -81,15 +92,27 @@ Each view has three presets:
 | **Fast** | Meaningful improvement, server-friendly cadence |
 | **Aggressive** | Near the practical speed ceiling for same-region play |
 
-Selecting a preset updates the *New value* column immediately. Click **Apply values** to commit.
+Selecting a preset updates the *New value* column immediately. Click **Apply values** to commit. In basic mode, presets only affect visible parameters — enable Advanced mode first to have presets also apply hidden parameters.
+
+---
+
+## Parameter confidence indicators
+
+Each parameter's documentation panel shows how well its effect is understood:
+
+- **No badge** — effect confirmed; consistent with community findings
+- **[ COMMUNITY-INFERRED ]** — effect understood through community testing, not officially documented by FromSoftware
+- **[ UNCONFIRMED ]** — in-game effect uncertain or untested in Elden Ring; parameter may be vestigial
+
+Parameters with known constraints or limitations also display a **⚠ WARNING** notice. The tool will prompt for confirmation before saving if any unconfirmed parameter has been modified.
 
 ---
 
 ## Notes and caveats
 
-- `BreakInRequestAreaCount` (Area search count) is stored in a field FromSoftware deliberately labelled as unused padding in the public PARAMDEF. Its exact server-side behaviour is community-inferred, not officially documented.
-- `allAreaSearchRateBellGuard` exists in the data as a legacy field from earlier FromSoftware titles. Its in-game effect in Elden Ring is unconfirmed.
-- The vanilla value for `summonTimeoutTime` (45 s) was read from an unmodified PS4 save and confirmed against the SaveForge specification.
+- `allAreaSearchRateBellGuard` is a legacy field from Dark Souls 2's Bell Keeper system. Its in-game effect in Elden Ring is unconfirmed.
+- `BreakInRequestAreaCount` is deliberately hidden by FromSoftware in the public PARAMDEF (labelled as unused padding). Its server-side behaviour is community-inferred.
+- The vanilla value for `summonTimeoutTime` (45 s) was read from an unmodified PS4 save.
 
 ---
 
@@ -98,8 +121,8 @@ Selecting a preset updates the *New value* column immediately. Click **Apply val
 Requires Go 1.23+ and the MinGW cross-compiler (`x86_64-w64-mingw32-gcc`) for Windows targets.
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/er_pvp_mod
-cd er_pvp_mod
+git clone https://github.com/DrippingSoup22/ER_multiplayer_editor
+cd ER_multiplayer_editor
 make gui          # produces bin/er_pvp_mod_gui.exe
 ```
 
