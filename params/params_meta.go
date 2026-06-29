@@ -43,9 +43,9 @@ type ParamMeta struct {
 	Min float64
 	Max float64
 
-	// Advanced-mode slider bounds (datatype-safe maximum freedom).
-	AdvancedMin float64
-	AdvancedMax float64
+	// Unlock-ranges slider bounds — datatype ceiling/floor, no conservative limits.
+	UnlockMin float64
+	UnlockMax float64
 
 	// Confidence describes how well-established this parameter's effect is.
 	// Defaults to Confirmed (zero value) — only set explicitly for non-confirmed params.
@@ -67,15 +67,15 @@ type ParamMeta struct {
 func (p ParamMeta) MinInt() int { return int(p.Min) }
 func (p ParamMeta) MaxInt() int { return int(p.Max) }
 
-func (p ParamMeta) AdvMinInt() int { return int(p.AdvancedMin) }
-func (p ParamMeta) AdvMaxInt() int { return int(p.AdvancedMax) }
+func (p ParamMeta) UnlockMinInt() int { return int(p.UnlockMin) }
+func (p ParamMeta) UnlockMaxInt() int { return int(p.UnlockMax) }
 
 func (p ParamMeta) RangeText() string {
 	return fmt.Sprintf("%.0f – %.0f", p.Min, p.Max)
 }
 
-func (p ParamMeta) RangeTextAdv() string {
-	return fmt.Sprintf("%.0f – %.0f", p.AdvancedMin, p.AdvancedMax)
+func (p ParamMeta) RangeTextUnlock() string {
+	return fmt.Sprintf("%.0f – %.0f", p.UnlockMin, p.UnlockMax)
 }
 
 // ---------------------------------------------------------------------------

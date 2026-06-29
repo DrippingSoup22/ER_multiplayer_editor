@@ -729,7 +729,7 @@ func configureRowsForView(v params.ParamView, advanced bool) {
 			setText(rows[i].current, "")
 			setText(rows[i].edit, "")
 			if unlockRanges {
-				setText(rows[i].rangeText, p.RangeTextAdv())
+				setText(rows[i].rangeText, p.RangeTextUnlock())
 			} else {
 				setText(rows[i].rangeText, p.RangeText())
 			}
@@ -762,7 +762,7 @@ func configureRowsForView(v params.ParamView, advanced bool) {
 func configureSlider(hwnd win.HWND, meta params.ParamMeta) {
 	lo, hi := meta.MinInt(), meta.MaxInt()
 	if unlockRanges {
-		lo, hi = meta.AdvMinInt(), meta.AdvMaxInt()
+		lo, hi = meta.UnlockMinInt(), meta.UnlockMaxInt()
 	}
 	win.SendMessage(hwnd, tbmSetRangeMin, 1, uintptr(lo))
 	win.SendMessage(hwnd, tbmSetRangeMax, 1, uintptr(hi))
@@ -869,6 +869,7 @@ func loadPath(path string) {
 	workingValues = &tmp
 	staged := *current
 	stagedValues = &staged
+	rowScrollOffset = 0
 	refreshControlStates()
 
 	switch in.kind {
@@ -886,29 +887,39 @@ func loadPath(path string) {
 // Field population & apply
 // ---------------------------------------------------------------------------
 
-// refreshView redraws both columns for the current view using workingValues
-// (Current column) and stagedValues (New value column). Call this whenever
-// either committed or staged state changes.
+// refreshView redraws all three display columns (Current, New value, Range)
+// for every visible row. It uses rows[i].meta rather than re-deriving the
+// param list so the scroll offset is already baked in.
 func refreshView() {
 	if loaded == nil || workingValues == nil || stagedValues == nil {
 		return
 	}
-	ps := params.VisibleParamsForView(currentView, advancedMode)
-	for i := 0; i < len(ps) && i < maxVisibleRows; i++ {
-		setText(rows[i].current, ps[i].ValueString(*workingValues))
-		staged := ps[i].ValueString(*stagedValues)
+	for i := 0; i < maxVisibleRows; i++ {
+		if rows[i].meta.Key == "" {
+			continue // hidden row
+		}
+		setText(rows[i].current, rows[i].meta.ValueString(*workingValues))
+		staged := rows[i].meta.ValueString(*stagedValues)
 		setText(rows[i].edit, staged)
 		n, _ := strconv.Atoi(staged)
 		win.SendMessage(rows[i].slider, tbmSetPos, 1, uintptr(n))
+		// Restore range text — cleared by clearFields but not reset by loadPath.
+		if unlockRanges {
+			setText(rows[i].rangeText, rows[i].meta.RangeTextUnlock())
+		} else {
+			setText(rows[i].rangeText, rows[i].meta.RangeText())
+		}
 	}
 }
 
 // populateNewValues updates only the edit fields and sliders (the "New value"
 // column) without touching the "Current value" display column or workingValues.
 func populateNewValues(v core.NetworkParamValues) {
-	ps := params.VisibleParamsForView(currentView, advancedMode)
-	for i := 0; i < len(ps) && i < maxVisibleRows; i++ {
-		val := ps[i].ValueString(v)
+	for i := 0; i < maxVisibleRows; i++ {
+		if rows[i].meta.Key == "" {
+			continue
+		}
+		val := rows[i].meta.ValueString(v)
 		setText(rows[i].edit, val)
 		n, _ := strconv.Atoi(val)
 		win.SendMessage(rows[i].slider, tbmSetPos, 1, uintptr(n))
@@ -1000,7 +1011,7 @@ func onRowEditChanged(idx int, code uint16) {
 	meta := rows[idx].meta
 	lo, hi := meta.MinInt(), meta.MaxInt()
 	if unlockRanges {
-		lo, hi = meta.AdvMinInt(), meta.AdvMaxInt()
+		lo, hi = meta.UnlockMinInt(), meta.UnlockMaxInt()
 	}
 	if v < lo || v > hi {
 		// Snap the edit field back to the current staged value so it doesn't
@@ -1074,8 +1085,17 @@ func applyCurrentEdits() {
 		setStatus("Load a file first.")
 		return
 	}
-	if err := core.ValidateNetworkParams(*stagedValues); err != nil {
-		setStatus("Validation failed: " + err.Error())
+	// In unlock-ranges mode only structural invariants are enforced; individual
+	// field limits are intentionally removed. In normal/advanced mode the full
+	// conservative validation applies.
+	var valErr error
+	if unlockRanges {
+		valErr = core.ValidateCrossFieldConstraints(*stagedValues)
+	} else {
+		valErr = core.ValidateNetworkParams(*stagedValues)
+	}
+	if valErr != nil {
+		setStatus("Validation failed: " + valErr.Error())
 		return
 	}
 	*workingValues = *stagedValues
@@ -1176,6 +1196,9 @@ func clearFields() {
 		setText(rows[i].edit, "")
 		setText(rows[i].rangeText, "")
 		win.SendMessage(rows[i].slider, tbmSetPos, 1, 0)
+	}
+	if hParamScrollBar != 0 {
+		win.ShowWindow(hParamScrollBar, win.SW_HIDE)
 	}
 	refreshControlStates()
 }

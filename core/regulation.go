@@ -374,11 +374,11 @@ func ValidateNetworkParams(p NetworkParamValues) error {
 	if p.MaxBreakInTargetListCount < 1 || p.MaxBreakInTargetListCount > 20 {
 		return fmt.Errorf("maxBreakInTargetListCount must be 1-20, got %d", p.MaxBreakInTargetListCount)
 	}
-	if p.BreakInRequestIntervalTimeSec < 2.0 || p.BreakInRequestIntervalTimeSec > 30.0 {
-		return fmt.Errorf("breakInRequestIntervalTimeSec must be 2-30, got %.0f", p.BreakInRequestIntervalTimeSec)
+	if p.BreakInRequestIntervalTimeSec < 2.0 || p.BreakInRequestIntervalTimeSec > 999.0 {
+		return fmt.Errorf("breakInRequestIntervalTimeSec must be 2-999, got %.0f", p.BreakInRequestIntervalTimeSec)
 	}
-	if p.BreakInRequestTimeOutSec < 3.0 || p.BreakInRequestTimeOutSec > 20.0 {
-		return fmt.Errorf("breakInRequestTimeOutSec must be 3-20, got %.0f", p.BreakInRequestTimeOutSec)
+	if p.BreakInRequestTimeOutSec < 3.0 || p.BreakInRequestTimeOutSec > 999.0 {
+		return fmt.Errorf("breakInRequestTimeOutSec must be 3-999, got %.0f", p.BreakInRequestTimeOutSec)
 	}
 	if p.BreakInRequestAreaCount < 1 || p.BreakInRequestAreaCount > 50 {
 		return fmt.Errorf("breakInRequestAreaCount must be 1-50, got %d", p.BreakInRequestAreaCount)
@@ -449,32 +449,40 @@ func ValidateNetworkParams(p NetworkParamValues) error {
 	if p.VisitorListMax < 1 || p.VisitorListMax > 100 {
 		return fmt.Errorf("visitorListMax must be 1-100, got %d", p.VisitorListMax)
 	}
-	if p.VisitorTimeOutTime < 1.0 || p.VisitorTimeOutTime > 600.0 {
-		return fmt.Errorf("visitorTimeOutTime must be 1-600, got %.0f", p.VisitorTimeOutTime)
+	if p.VisitorTimeOutTime < 1.0 || p.VisitorTimeOutTime > 999.0 {
+		return fmt.Errorf("visitorTimeOutTime must be 1-999, got %.0f", p.VisitorTimeOutTime)
 	}
-	if p.VisitorDownloadSpan < 1.0 || p.VisitorDownloadSpan > 600.0 {
-		return fmt.Errorf("visitorDownloadSpan must be 1-600, got %.0f", p.VisitorDownloadSpan)
+	if p.VisitorDownloadSpan < 1.0 || p.VisitorDownloadSpan > 999.0 {
+		return fmt.Errorf("visitorDownloadSpan must be 1-999, got %.0f", p.VisitorDownloadSpan)
 	}
 
 	// Cross-field invariants (defensive — the UI also clamps these).
+	if err := ValidateCrossFieldConstraints(p); err != nil {
+		return err
+	}
+	return nil
+}
+
+// ValidateCrossFieldConstraints checks only the structural invariants that must
+// hold regardless of whether Unlock ranges is active. Used in place of
+// ValidateNetworkParams when the caller intentionally permits out-of-casual-range
+// values (i.e. the Unlock ranges mode in the UI).
+func ValidateCrossFieldConstraints(p NetworkParamValues) error {
 	if p.ReloadSignCellCount > p.ReloadSignTotalCount {
-		return fmt.Errorf("reloadSignCellCount (%d) must not exceed reloadSignTotalCount (%d)", p.ReloadSignCellCount, p.ReloadSignTotalCount)
+		return fmt.Errorf("sign pool per-cell cap (%d) must not exceed total pool (%d)", p.ReloadSignCellCount, p.ReloadSignTotalCount)
 	}
 	if p.ReloadSignTotalCount > p.SingGetMax {
-		return fmt.Errorf("reloadSignTotalCount (%d) must not exceed singGetMax (%d)", p.ReloadSignTotalCount, p.SingGetMax)
+		return fmt.Errorf("sign pool total (%d) must not exceed buffer cap (%d)", p.ReloadSignTotalCount, p.SingGetMax)
 	}
 	if p.ReloadSearchCoopBlueMin > p.ReloadSearchCoopBlueMax {
-		return fmt.Errorf("reloadSearchCoopBlueMin (%.0f) must not exceed reloadSearchCoopBlueMax (%.0f)", p.ReloadSearchCoopBlueMin, p.ReloadSearchCoopBlueMax)
+		return fmt.Errorf("co-op search min (%.0f) must not exceed max (%.0f)", p.ReloadSearchCoopBlueMin, p.ReloadSearchCoopBlueMax)
 	}
 	return nil
 }
 
 // PatchNetworkParams modifies NetworkParam in UserData11 and returns the patched UserData11.
+// Validation is the caller's responsibility (ValidateNetworkParams or ValidateCrossFieldConstraints).
 func PatchNetworkParams(ud11 []byte, patch NetworkParamValues) ([]byte, error) {
-	if err := ValidateNetworkParams(patch); err != nil {
-		return nil, err
-	}
-
 	regBlob, iv, dcxFormat, err := extractRegulation(ud11)
 	if err != nil {
 		return nil, fmt.Errorf("extract regulation: %w", err)
