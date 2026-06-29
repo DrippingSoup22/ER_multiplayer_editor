@@ -112,7 +112,6 @@ Parameters with known constraints or limitations also display a **⚠ WARNING** 
 
 - `allAreaSearchRateBellGuard` is a legacy field from Dark Souls 2's Bell Keeper system. Its in-game effect in Elden Ring is unconfirmed.
 - `BreakInRequestAreaCount` is deliberately hidden by FromSoftware in the public PARAMDEF (labelled as unused padding). Its server-side behaviour is community-inferred.
-- The vanilla value for `summonTimeoutTime` (45 s) was read from an unmodified PS4 save.
 
 ---
 
@@ -125,12 +124,6 @@ git clone https://github.com/DrippingSoup22/ER_multiplayer_editor
 cd ER_multiplayer_editor
 make gui          # produces bin/er_pvp_mod_gui.exe
 ```
-
----
-
-## Roadmap
-
-- [ ] Linux version (TUI or web interface)
 
 ---
 
