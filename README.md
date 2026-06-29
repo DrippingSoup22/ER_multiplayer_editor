@@ -10,7 +10,7 @@ A Windows GUI tool that edits the network parameters stored inside an Elden Ring
 
 Elden Ring stores a set of timing and capacity values in `NETWORK_PARAM_ST` inside your save file. These values control how aggressively the game searches for multiplayer sessions — how often it polls the server, how many candidates it fetches, how long it waits for a connection, and so on.
 
-This tool reads those values, lets you change them through a guided interface, and writes the result back. The regulation parsing core is derived from [EldenRing-SaveForge](https://github.com/oisis/EldenRing-SaveForge).
+This tool reads those values, lets you change them through a guided interface, and writes the result back.
 
 ---
 
@@ -59,27 +59,11 @@ This tool reads those values, lets you change them through a guided interface, a
 
 ---
 
-## Parameter views at a glance
-
-### Invader
-Controls the invasion matchmaking loop — how many candidate hosts are fetched, how often the game retries, and how long each connection attempt waits before being abandoned.
-
-### Summoning Sign
-Controls sign pool size and refresh cadence. Raising the pool (total + per-cell cap) and shortening the refresh intervals makes co-op signs appear faster and more reliably. Advanced mode exposes spatial cell-range parameters.
-
-### Hunter
-Controls Blue Cipher Ring dispatch. The key levers are the cooldown between search cycles and the randomised interval that spreads out server requests. Raising the all-area search rate ensures the game looks across the full map, not just your local region.
-
-### Taunter's Tongue
-Controls how quickly the game fetches fresh invader candidates and how long it waits for each connection attempt. Shorter values mean fewer wasted slots and faster cycling through the candidate list.
-
----
-
 ## Advanced mode
 
 Click the **Advanced** checkbox (you will be shown a warning on first activation per session). Advanced mode:
 
-- Reveals parameters not exposed by standard editors (spatial cell ranges, secondary refresh timers, retribution-blue search rates)
+- Reveals parameters not exposed by standard editors (summon timeout, inactive refresh timer, spatial cell ranges, bell-guard search rate)
 - Expands all slider limits to the datatype ceiling
 - Shows technical documentation (PARAMDEF SortID, memory offset, vanilla value, validation range, cross-field constraints)
 
@@ -106,7 +90,6 @@ Selecting a preset updates the *New value* column immediately. Click **Apply val
 - `BreakInRequestAreaCount` (Area search count) is stored in a field FromSoftware deliberately labelled as unused padding in the public PARAMDEF. Its exact server-side behaviour is community-inferred, not officially documented.
 - `allAreaSearchRateBellGuard` exists in the data as a legacy field from earlier FromSoftware titles. Its in-game effect in Elden Ring is unconfirmed.
 - The vanilla value for `summonTimeoutTime` (45 s) was read from an unmodified PS4 save and confirmed against the SaveForge specification.
-- All other vanilla values match the SaveForge specification exactly.
 
 ---
 
@@ -125,8 +108,6 @@ make gui          # produces bin/er_pvp_mod_gui.exe
 ## Roadmap
 
 - [ ] Linux version (TUI or web interface)
-- [ ] Verify `summonTimeoutTime` vanilla value across game versions
-- [ ] Confirm `allAreaSearchRateBellGuard` behaviour in ER
 
 ---
 
