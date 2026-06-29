@@ -134,9 +134,19 @@ make gui          # produces bin/er_pvp_mod_gui.exe
 
 ---
 
+## Windows security note
+
+When you download and run the executable for the first time, Windows may show a *"Windows protected your PC"* SmartScreen warning because the file is not digitally signed. This is normal for open-source tools distributed without a paid code-signing certificate.
+
+To proceed: click **More info**, then **Run anyway**.
+
+---
+
 ## License
 
-MIT — see [LICENSE](LICENSE) for details.
+GPL v3 — see [LICENSE](LICENSE) for details.
+
+The regulation parsing core (`core/regulation.go`) is adapted from [EldenRing-SaveForge](https://github.com/oisis/EldenRing-SaveForge) by oisis, which is also GPL v3. This project's GPL v3 license is a direct consequence of that dependency.
 
 ---
 
