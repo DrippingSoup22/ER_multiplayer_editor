@@ -6,60 +6,68 @@ A Windows GUI tool that edits the network parameters stored inside an Elden Ring
 
 ---
 
-## What it does
+## How it works
 
-Elden Ring stores a set of timing and capacity values in `NETWORK_PARAM_ST` inside your save file. These values control how aggressively the game searches for multiplayer sessions — how often it polls the server, how many candidates it fetches, how long it waits for a connection, and so on.
+Elden Ring stores a set of timing and capacity values in `NETWORK_PARAM_ST` inside your save file. These control how aggressively the game searches for multiplayer sessions — how often it polls the server, how many candidates it fetches, how long it waits for a connection, and so on.
 
-This tool reads those values, lets you change them through a guided interface, and writes the result back.
+**On PS4**, the game reads these values from the save file on the second launch after it has been modified. Edits made with this tool take effect in-game.
+
+**On PC**, the game re-fetches all network parameters from FromSoftware's servers at every login, overwriting whatever is in the save file. Edits made at the save level have no runtime effect on PC.
+
+This tool reads the parameter block, lets you change values through a guided interface, and writes the result back to the file.
 
 ---
 
 ## Supported save formats
 
-| Format | File | Platform |
-|--------|------|----------|
-| PC save | `ER0000.sl2` | Windows / Steam |
-| PS4 save | `memory.dat` | PlayStation 4 |
-
-> **PC note:** the tool reads and writes PC saves correctly at the file level, but whether the game actually uses modified network parameters at runtime on PC is unconfirmed. Parameter changes have been verified to work on PS4. If you test this on PC, feedback is welcome.
+| Format | File | Edits take effect |
+|--------|------|-------------------|
+| PS4 save | `memory.dat` | Yes — on the second launch after modifying |
+| PC save | `ER0000.sl2` | No — server parameters overwrite save on login |
 
 ---
 
 ## Features
 
-- **4 parameter views** — Invader, Summoning Sign, Hunter, Taunter's Tongue
+- **5 parameter views** — Invader, Find Signs, Place Sign, Hunter, Taunter's Tongue
 - **27 tunable parameters** with plain-English documentation and confidence indicators for every field
 - **Scrollable parameter list** — mouse wheel supported; scrollbar appears automatically when a view has more parameters than fit at once
-- **Advanced mode** — reveals additional hidden parameters and shows technical documentation (memory offsets, PARAMDEF IDs, cross-field constraints)
-- **Unlock ranges** — available inside Advanced mode; disables all sliders and removes every numerical limit, allowing values to be entered freely via the edit fields
+- **Advanced mode** — reveals additional hidden parameters and shows technical documentation (memory offsets, PARAMDEF IDs, vanilla values, cross-field constraints)
+- **Unlock ranges** — available inside Advanced mode; removes every numerical limit, allowing any value to be typed directly into the edit fields
 - **3 presets per view** — Vanilla (exact game defaults), Fast, Aggressive; in basic mode, presets only affect visible parameters
 - **Non-destructive editing** — changes are staged in memory and only written on explicit save
 - **Current vs new** display — the left column always shows what is on disk; the right column shows your pending edits
-- **Save warning** — if you attempt to save a parameter whose in-game effect is unconfirmed, a confirmation prompt appears before the file picker
+- **Save warning** — if any parameter with an unconfirmed effect has been modified, a confirmation prompt appears before the file picker
 
 ---
 
 ## How to use
 
 1. **Open your save file**
-   - Click **Browse…** and select your `ER0000.sl2` (PC) or `memory.dat` (PS4)
+   - Click **Browse…** and select your `memory.dat` (PS4) or `ER0000.sl2` (PC)
    - The *Save type* indicator in the top bar confirms the format was recognised
 
 2. **Choose a view**
-   - **Invader** — controls how often and how broadly the game searches for invasion targets
-   - **Summoning Sign** — controls sign pool size, refresh rate, and summon timeout
-   - **Hunter** — controls Blue Cipher Ring dispatch frequency and search coverage
-   - **Taunter's Tongue** — controls how fast and often invaders arrive when the item is active
+   - **Invader** — how often and how broadly the game searches for invasion targets
+   - **Find Signs** — sign pool size, refresh rate, and summon timeout (host side)
+   - **Place Sign** — heartbeat and upload cadence for keeping your own sign alive (phantom side)
+   - **Hunter** — Blue Cipher Ring dispatch frequency and search coverage
+   - **Taunter's Tongue** — how fast and often invaders arrive when the item is active
 
 3. **Edit values**
    - Drag a slider, type in an edit field, or pick a preset from the dropdown
    - Changes are previewed in the *New value* column without touching the file
    - Click a parameter name or edit field to read its full documentation in the right panel
-   - Switch views freely — your edits persist across all views until you save
+   - Switch views freely — edits persist across all views until you save
 
 4. **Commit and save**
    - Click **Apply values** to lock your edits as the new current values (shown in the *Current* column)
    - Click **Save patched file** to write the modified save to disk (a file picker will appear)
+
+5. **Make it take effect (PS4 only)**
+   - Copy the patched `memory.dat` back to your PS4
+   - **Launch the game → quit to the main menu or close it → launch again**
+   - On the second launch the game reads the network parameters from the save file
 
 ---
 
@@ -67,7 +75,7 @@ This tool reads those values, lets you change them through a guided interface, a
 
 Click the **Advanced** checkbox. Advanced mode:
 
-- Reveals parameters not exposed in standard view
+- Reveals parameters not exposed in the standard view
 - Shows technical documentation for each field (PARAMDEF SortID, memory offset, vanilla value, validation range, cross-field constraints)
 
 > Advanced combinations can prevent multiplayer sessions from establishing. Keep a backup and test changes before distributing a patched file.
@@ -78,7 +86,6 @@ When Advanced mode is on, an **Unlock ranges** checkbox appears. Enabling it:
 
 - Disables all sliders and removes every numerical limit
 - Values must be entered by typing directly into the edit fields
-- No upper or lower boundary applies
 
 > Values outside the tested ranges can produce undefined matchmaking behaviour or corrupt the parameter block. Apply the Vanilla preset at any time to restore safe defaults.
 
@@ -92,7 +99,7 @@ Each view has three presets:
 |--------|--------|
 | **Vanilla** | Exact values shipped with the game |
 | **Fast** | Meaningful improvement, server-friendly cadence |
-| **Aggressive** | Near the practical speed ceiling for same-region play |
+| **Aggressive** | Near the practical speed ceiling while keeping cross-region connections viable |
 
 Selecting a preset updates the *New value* column immediately. Click **Apply values** to commit. In basic mode, presets only affect visible parameters — enable Advanced mode first to have presets also apply hidden parameters.
 

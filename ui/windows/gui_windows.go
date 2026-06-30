@@ -163,10 +163,11 @@ var (
 	// selectedPresetKeys remembers the last chosen preset key per view so that
 	// switching views and returning does not reset the preset combo to Vanilla.
 	selectedPresetKeys = map[params.ParamView]string{
-		params.ViewInvader: "vanilla",
-		params.ViewSign:    "vanilla",
-		params.ViewHunter:  "vanilla",
-		params.ViewTongue:  "vanilla",
+		params.ViewInvader:   "vanilla",
+		params.ViewSign:      "vanilla",
+		params.ViewSignPlace: "vanilla",
+		params.ViewHunter:    "vanilla",
+		params.ViewTongue:    "vanilla",
 	}
 
 	rowScrollOffset  int     // index of first visible param row
@@ -560,7 +561,8 @@ func onCreate(hwnd win.HWND) {
 
 func initViewCombo() {
 	addComboItem(hViewCombo, "Invader")
-	addComboItem(hViewCombo, "Summoning Sign")
+	addComboItem(hViewCombo, "Find Signs")
+	addComboItem(hViewCombo, "Place Sign")
 	addComboItem(hViewCombo, "Hunter")
 	addComboItem(hViewCombo, "Taunter's Tongue")
 	win.SendMessage(hViewCombo, win.CB_SETCURSEL, 0, 0)
@@ -610,8 +612,10 @@ func viewByComboIndex(i int) params.ParamView {
 	case 1:
 		return params.ViewSign
 	case 2:
-		return params.ViewHunter
+		return params.ViewSignPlace
 	case 3:
+		return params.ViewHunter
+	case 4:
 		return params.ViewTongue
 	default:
 		return params.ViewInvader
@@ -1147,7 +1151,7 @@ func buildSaveWarning(vals core.NetworkParamValues) string {
 	unconfirmedCount := 0
 
 	allViews := []params.ParamView{
-		params.ViewInvader, params.ViewSign, params.ViewHunter, params.ViewTongue,
+		params.ViewInvader, params.ViewSign, params.ViewSignPlace, params.ViewHunter, params.ViewTongue,
 	}
 	for _, v := range allViews {
 		for _, p := range params.ParamsForView(v) {

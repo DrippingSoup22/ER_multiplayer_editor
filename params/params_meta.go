@@ -11,10 +11,11 @@ import (
 type ParamView string
 
 const (
-	ViewInvader ParamView = "invader"
-	ViewSign    ParamView = "sign"
-	ViewHunter  ParamView = "hunter"
-	ViewTongue  ParamView = "tongue"
+	ViewInvader   ParamView = "invader"
+	ViewSign      ParamView = "sign"
+	ViewSignPlace ParamView = "sign_place"
+	ViewHunter    ParamView = "hunter"
+	ViewTongue    ParamView = "tongue"
 )
 
 // Confidence describes how well-established a parameter's in-game effect is.
@@ -260,6 +261,8 @@ func ParamsForView(v ParamView) []ParamMeta {
 	switch v {
 	case ViewSign:
 		return signParams
+	case ViewSignPlace:
+		return signPlaceParams
 	case ViewHunter:
 		return hunterParams
 	case ViewTongue:
