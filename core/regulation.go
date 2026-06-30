@@ -79,7 +79,9 @@ const (
 	offsetAllAreaSearchRateVsBlue    = 0x1D9 // u8 — all-area search rate, hunter blue  [0-100]
 	offsetAllAreaSearchRateBellGuard = 0x1DA // u8 — all-area search rate, bell-guardian [0-100]
 
-	// Group: Visitor / Taunter's Tongue (VISITOR, SortIDs 1500–1530)
+	// Group: Visitor (VISITOR, SortIDs 1500–1530) — not exposed as a UI view;
+	// no confirmed link to any specific in-game item or mechanic. Parsed and
+	// written transparently to preserve byte-for-byte round-tripping.
 	offsetVisitorListMax      = 0x240
 	offsetVisitorTimeOutTime  = 0x244
 	offsetVisitorDownloadSpan = 0x248
@@ -117,7 +119,7 @@ type NetworkParamValues struct {
 	AllAreaSearchRateVsBlue    int32   `json:"allAreaSearchRateVsBlue"`
 	AllAreaSearchRateBellGuard int32   `json:"allAreaSearchRateBellGuard"`
 
-	// --- Host role (Taunter's Tongue / visitor) ---
+	// --- Visitor group (not exposed as a UI view; see comment near offsets above) ---
 	VisitorListMax      int32   `json:"visitorListMax"`
 	VisitorTimeOutTime  float32 `json:"visitorTimeOutTime"`
 	VisitorDownloadSpan float32 `json:"visitorDownloadSpan"`

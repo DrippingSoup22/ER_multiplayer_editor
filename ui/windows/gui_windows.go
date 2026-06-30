@@ -172,7 +172,6 @@ var (
 		params.ViewSign:      "vanilla",
 		params.ViewSignPlace: "vanilla",
 		params.ViewHunter:    "vanilla",
-		params.ViewTongue:    "vanilla",
 	}
 
 	rowScrollOffset  int     // index of first visible param row
@@ -577,7 +576,6 @@ func initViewCombo() {
 	addComboItem(hViewCombo, "Find Signs")
 	addComboItem(hViewCombo, "Place Sign")
 	addComboItem(hViewCombo, "Hunter")
-	addComboItem(hViewCombo, "Taunter's Tongue")
 	win.SendMessage(hViewCombo, win.CB_SETCURSEL, 0, 0)
 }
 
@@ -628,8 +626,6 @@ func viewByComboIndex(i int) params.ParamView {
 		return params.ViewSignPlace
 	case 3:
 		return params.ViewHunter
-	case 4:
-		return params.ViewTongue
 	default:
 		return params.ViewInvader
 	}
@@ -1113,7 +1109,7 @@ func applyCurrentEdits() {
 		return
 	}
 	allViews := []params.ParamView{
-		params.ViewInvader, params.ViewSign, params.ViewSignPlace, params.ViewHunter, params.ViewTongue,
+		params.ViewInvader, params.ViewSign, params.ViewSignPlace, params.ViewHunter,
 	}
 	for _, v := range allViews {
 		for _, p := range params.ParamsForView(v) {
@@ -1192,8 +1188,6 @@ func viewDisplayName(v params.ParamView) string {
 		return "Place Sign"
 	case params.ViewHunter:
 		return "Hunter"
-	case params.ViewTongue:
-		return "Taunter's Tongue"
 	default:
 		return "Invader"
 	}
@@ -1243,7 +1237,7 @@ func buildSaveWarning(vals core.NetworkParamValues) string {
 	unconfirmedCount := 0
 
 	allViews := []params.ParamView{
-		params.ViewInvader, params.ViewSign, params.ViewSignPlace, params.ViewHunter, params.ViewTongue,
+		params.ViewInvader, params.ViewSign, params.ViewSignPlace, params.ViewHunter,
 	}
 	for _, v := range allViews {
 		for _, p := range params.ParamsForView(v) {

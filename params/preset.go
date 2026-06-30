@@ -218,51 +218,6 @@ var hunterPresets = []PresetMeta{
 }
 
 // ---------------------------------------------------------------------------
-// Taunter's Tongue presets
-// ---------------------------------------------------------------------------
-
-var tonguePresets = []PresetMeta{
-	{
-		Key: "vanilla", View: ViewTongue, Label: "Vanilla",
-		Description: "The unmodified FromSoftware defaults. Use this to restore Taunter's Tongue settings to their shipped state.",
-		Apply: func(v core.NetworkParamValues) core.NetworkParamValues {
-			d := core.NetworkParamDefaults()
-			v.VisitorListMax = d.VisitorListMax
-			v.VisitorTimeOutTime = d.VisitorTimeOutTime
-			v.VisitorDownloadSpan = d.VisitorDownloadSpan
-			return v
-		},
-	},
-	{
-		Key: "fast", View: ViewTongue, Label: "Fast",
-		Description: "More frequent invasions while remaining server-friendly.\r\n\r\n" +
-			"The candidate pool is doubled for more connection attempts per cycle, reducing the chance of exhausting the list without finding a match. " +
-			"The connection timeout is meaningfully reduced from vanilla's 60 s — same-region invaders establish well within the new window, while failed slots cycle faster. " +
-			"Cross-regional invaders retain enough time to complete their handshake. " +
-			"The list refresh interval is shortened to keep the candidate pool current.",
-		Apply: func(v core.NetworkParamValues) core.NetworkParamValues {
-			v.VisitorListMax = 20
-			v.VisitorTimeOutTime = 25.0
-			v.VisitorDownloadSpan = 20.0
-			return v
-		},
-	},
-	{
-		Key: "aggressive", View: ViewTongue, Label: "Aggressive",
-		Description: "Maximum invasion rate while preserving cross-regional connections — pushed to the practical speed ceiling without sacrificing connection breadth.\r\n\r\n" +
-			"The candidate pool is raised to its largest practical size for the best coverage per cycle. " +
-			"The connection timeout is cut to a third of the vanilla value while still giving cross-regional invaders enough time to establish. " +
-			"The list refreshes at its fastest viable cadence, keeping the pool current even during the most active PvP sessions.",
-		Apply: func(v core.NetworkParamValues) core.NetworkParamValues {
-			v.VisitorListMax = 30
-			v.VisitorTimeOutTime = 20.0
-			v.VisitorDownloadSpan = 10.0
-			return v
-		},
-	},
-}
-
-// ---------------------------------------------------------------------------
 // Lookup helpers
 // ---------------------------------------------------------------------------
 
@@ -274,8 +229,6 @@ func PresetsForView(v ParamView) []PresetMeta {
 		return signPlacePresets
 	case ViewHunter:
 		return hunterPresets
-	case ViewTongue:
-		return tonguePresets
 	default:
 		return invaderPresets
 	}

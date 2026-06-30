@@ -15,7 +15,6 @@ const (
 	ViewSign      ParamView = "sign"
 	ViewSignPlace ParamView = "sign_place"
 	ViewHunter    ParamView = "hunter"
-	ViewTongue    ParamView = "tongue"
 )
 
 // Confidence describes how well-established a parameter's in-game effect is.
@@ -175,13 +174,6 @@ func (p ParamMeta) ValueString(v core.NetworkParamValues) string {
 		return strconv.Itoa(int(v.AllAreaSearchRateVsBlue))
 	case "allAreaSearchRateBellGuard":
 		return strconv.Itoa(int(v.AllAreaSearchRateBellGuard))
-	// Tongue
-	case "visitorListMax":
-		return strconv.Itoa(int(v.VisitorListMax))
-	case "visitorTimeOutTime":
-		return fmt.Sprintf("%.0f", v.VisitorTimeOutTime)
-	case "visitorDownloadSpan":
-		return fmt.Sprintf("%.0f", v.VisitorDownloadSpan)
 	default:
 		return ""
 	}
@@ -240,13 +232,6 @@ func (p ParamMeta) SetFromInt(dst *core.NetworkParamValues, n int) error {
 		dst.AllAreaSearchRateVsBlue = int32(n)
 	case "allAreaSearchRateBellGuard":
 		dst.AllAreaSearchRateBellGuard = int32(n)
-	// Tongue
-	case "visitorListMax":
-		dst.VisitorListMax = int32(n)
-	case "visitorTimeOutTime":
-		dst.VisitorTimeOutTime = float32(n)
-	case "visitorDownloadSpan":
-		dst.VisitorDownloadSpan = float32(n)
 	default:
 		return fmt.Errorf("unsupported parameter key: %s", p.Key)
 	}
@@ -265,8 +250,6 @@ func ParamsForView(v ParamView) []ParamMeta {
 		return signPlaceParams
 	case ViewHunter:
 		return hunterParams
-	case ViewTongue:
-		return tongueParams
 	default:
 		return invaderParams
 	}

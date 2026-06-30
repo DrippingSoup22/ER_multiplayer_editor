@@ -1,6 +1,6 @@
 # ER PvP Mod — Elden Ring Multiplayer Parameter Editor
 
-A Windows GUI tool that edits the network parameters stored inside an Elden Ring save file, letting you tune invasion frequency, summon sign responsiveness, hunter dispatch speed, and Taunter's Tongue behaviour without touching the game files.
+A Windows GUI tool that edits the network parameters stored inside an Elden Ring save file, letting you tune invasion frequency, summon sign responsiveness, and hunter dispatch speed without touching the game files.
 
 **Edits only take effect on PS4.** The PS4 game reads these parameters from the save file on the second launch after modification. On PC the game re-fetches all network parameters from FromSoftware's servers at every login, overwriting the save — PC saves can be loaded and modified but changes will have no in-game effect.
 
@@ -31,8 +31,8 @@ This tool reads the parameter block, lets you change values through a guided int
 
 ## Features
 
-- **5 parameter views** — Invader, Find Signs, Place Sign, Hunter, Taunter's Tongue
-- **27 tunable parameters** with plain-English documentation and confidence indicators for every field
+- **4 parameter views** — Invader, Find Signs, Place Sign, Hunter
+- **24 tunable parameters** with plain-English documentation and confidence indicators for every field
 - **Scrollable parameter list** — mouse wheel supported; scrollbar appears automatically when a view has more parameters than fit at once
 - **Advanced mode** — reveals additional hidden parameters and shows technical documentation (memory offsets, PARAMDEF IDs, vanilla values, cross-field constraints)
 - **Unlock ranges** — available inside Advanced mode; removes every numerical limit, allowing any value to be typed directly into the edit fields
@@ -56,7 +56,6 @@ This tool reads the parameter block, lets you change values through a guided int
    - **Find Signs** — sign pool size, refresh rate, and summon timeout (host side)
    - **Place Sign** — heartbeat and upload cadence for keeping your own sign alive (phantom side)
    - **Hunter** — Blue Cipher Ring dispatch frequency and search coverage
-   - **Taunter's Tongue** — how fast and often invaders arrive when the item is active
 
 3. **Edit values**
    - Drag a slider, type in an edit field, or pick a preset from the dropdown
