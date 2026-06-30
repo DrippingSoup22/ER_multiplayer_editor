@@ -40,11 +40,11 @@ const (
 	// Calculated sequentially from NetworkParam.xml PARAMDEF.
 
 	// Group: Common (NET_COMMON_PARAM, SortID 0–3)
-	offsetSummonTimeoutTime = 0x08 // f32 — SortID 2 — 召喚タイムアウト時間[秒]
+	offsetSummonTimeoutTime = 0x08 // f32 — SortID 2 — 召喚希望タイムアウト時間[秒]
 
 	// Group: Summon Signs (NET_SUMMON_SIGN_PARAM, SortIDs 102–124)
-	// SortID 102 — inactive-state refresh (signed out of sign area); SortID 103 — active-state refresh.
-	offsetReloadSignIntervalTime1 = 0x18 // f32 — SortID 102 — 召喚サイン再取得待機時間(非活性)[秒]
+	// SortID 102 — sparse-area refresh (low sign density); SortID 103 — standard refresh.
+	offsetReloadSignIntervalTime1 = 0x18 // f32 — SortID 102 — 召喚サイン再取得待機時間(過疎時)[秒]
 	offsetReloadSignIntervalTime2 = 0x1C // f32 — SortID 103 — 召喚サイン再取得待機時間[秒]
 	offsetReloadSignTotalCount    = 0x20 // s32 — SortID 105 — 召喚サイン所持可能数上限(全体)
 	offsetReloadSignCellCount     = 0x24 // s32 — SortID 106 — 召喚サイン所持可能数上限(セル)
