@@ -2,6 +2,8 @@
 
 A Windows GUI tool that edits the network parameters stored inside an Elden Ring save file, letting you tune invasion frequency, summon sign responsiveness, hunter dispatch speed, and Taunter's Tongue behaviour without touching the game files.
 
+**Edits only take effect on PS4.** The PS4 game reads these parameters from the save file on the second launch after modification. On PC the game re-fetches all network parameters from FromSoftware's servers at every login, overwriting the save — PC saves can be loaded and modified but changes will have no in-game effect.
+
 > **Back up your save before making any changes.** The tool writes directly to your save file on "Save patched file". A corrupt save cannot be recovered without a backup.
 
 ---
@@ -34,7 +36,9 @@ This tool reads the parameter block, lets you change values through a guided int
 - **Scrollable parameter list** — mouse wheel supported; scrollbar appears automatically when a view has more parameters than fit at once
 - **Advanced mode** — reveals additional hidden parameters and shows technical documentation (memory offsets, PARAMDEF IDs, vanilla values, cross-field constraints)
 - **Unlock ranges** — available inside Advanced mode; removes every numerical limit, allowing any value to be typed directly into the edit fields
-- **3 presets per view** — Vanilla (exact game defaults), Fast, Aggressive; in basic mode, presets only affect visible parameters
+- **3 presets per view** — Vanilla (exact game defaults), Fast, Aggressive; in basic mode presets only affect visible parameters, in Advanced mode they also apply hidden ones
+- **Apply / Apply All** — commit edits for the current view only, or for all views at once
+- **Reset to vanilla** — one-click reset of every parameter in every view to the game's shipped defaults
 - **Non-destructive editing** — changes are staged in memory and only written on explicit save
 - **Current vs new** display — the left column always shows what is on disk; the right column shows your pending edits
 - **Save warning** — if any parameter with an unconfirmed effect has been modified, a confirmation prompt appears before the file picker
@@ -61,7 +65,8 @@ This tool reads the parameter block, lets you change values through a guided int
    - Switch views freely — edits persist across all views until you save
 
 4. **Commit and save**
-   - Click **Apply values** to lock your edits as the new current values (shown in the *Current* column)
+   - Click **Apply** to lock edits for the current view, or **Apply All** to commit every view at once — locked values appear in the *Current* column
+   - Use **Reset to vanilla** (controls bar, next to the preset dropdown) to discard all staged and committed edits and return every parameter to the game's shipped defaults
    - Click **Save patched file** to write the modified save to disk (a file picker will appear)
 
 5. **Make it take effect (PS4 only)**
@@ -101,7 +106,7 @@ Each view has three presets:
 | **Fast** | Meaningful improvement, server-friendly cadence |
 | **Aggressive** | Near the practical speed ceiling while keeping cross-region connections viable |
 
-Selecting a preset updates the *New value* column immediately. Click **Apply values** to commit. In basic mode, presets only affect visible parameters — enable Advanced mode first to have presets also apply hidden parameters.
+Selecting a preset updates the *New value* column immediately. Click **Apply** or **Apply All** to commit. In basic mode, presets only affect visible parameters — enable Advanced mode first to have presets also apply hidden parameters.
 
 ---
 

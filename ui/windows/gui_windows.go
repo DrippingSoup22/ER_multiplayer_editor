@@ -21,15 +21,17 @@ import (
 // ---------------------------------------------------------------------------
 
 const (
-	idPathEdit    = 1001
-	idBrowse      = 1002
-	idLoad        = 1003
-	idSave        = 1004
-	idViewCombo   = 1005
-	idPresetCombo = 1006
-	idApplyValues = 1007
-	idAdvanced    = 1008
+	idPathEdit     = 1001
+	idBrowse       = 1002
+	idLoad         = 1003
+	idSave         = 1004
+	idViewCombo    = 1005
+	idPresetCombo  = 1006
+	idApplyValues  = 1007
+	idAdvanced     = 1008
 	idUnlockRanges = 1009
+	idApplyView    = 1010
+	idResetAll     = 1011
 	idDocBox       = 1401
 
 	baseRowSliderID = 1200
@@ -83,7 +85,7 @@ const (
 
 const (
 	winW = 1060
-	winH = 460
+	winH = 480
 
 	margin     = int32(14) // outer margin
 	gutter     = int32(8)  // gap between sections
@@ -126,10 +128,13 @@ const (
 	firstRowY = paramGrpY + int32(46)
 	rowStride  = int32(30)
 
-	// Action bar — Apply values + Save patched file + status, all in one row
-	actionBarY = paramGrpY + paramGrpH + int32(8) // 404
-	actionBarH = int32(32)
-	actionBtnW = int32(120) // width shared by both action buttons
+	// Action rows — Apply (current view) + Apply All on row 1; Save on row 2
+	actionRow1Y = paramGrpY + paramGrpH + int32(8)
+	actionRow1H = int32(32)
+	actionRow2Y = actionRow1Y + actionRow1H + int32(6)
+	actionRow2H = int32(32)
+	applyBtnW   = int32(90)
+	saveBtnW    = int32(188) // matches combined width of two Apply buttons + gap
 )
 
 // ---------------------------------------------------------------------------
@@ -362,6 +367,12 @@ func wndProc(hwnd win.HWND, msg uint32, wParam, lParam uintptr) uintptr {
 		case idApplyValues:
 			applyCurrentEdits()
 			return 0
+		case idApplyView:
+			applyCurrentViewEdits()
+			return 0
+		case idResetAll:
+			resetToVanilla()
+			return 0
 		case idAdvanced:
 			onAdvancedToggle()
 			return 0
@@ -487,7 +498,8 @@ func onCreate(hwnd win.HWND) {
 	hUnlockRangesCheck = createCheckbox(hwnd, "Unlock ranges", int32(906), ctrlBarY+6, 136, 22, idUnlockRanges, instance)
 	win.ShowWindow(hUnlockRangesCheck, win.SW_HIDE)
 
-	setFontAll(guiFont, hViewLbl, hViewCombo, hPresetLbl, hPresetCombo, hAdvancedCheck, hUnlockRangesCheck)
+	hResetBtn := createButton(hwnd, "Reset to vanilla", margin+246+200+16, ctrlBarY+2, 120, topBarH, idResetAll, instance)
+	setFontAll(guiFont, hViewLbl, hViewCombo, hPresetLbl, hPresetCombo, hAdvancedCheck, hUnlockRangesCheck, hResetBtn)
 
 	// ── PARAMETERS GROUP BOX ─────────────────────────────────────────────
 	//
@@ -535,19 +547,20 @@ func onCreate(hwnd win.HWND) {
 	// Spans the same vertical range as the param box + action bar gap so it
 	// aligns flush with the bottom of the param group box.
 
-	docGrpH := actionBarY - paramGrpY
+	docGrpH := actionRow1Y - paramGrpY
 	hDocGrp := createGroupBox(hwnd, "Documentation", rightColX, paramGrpY, rightColW, docGrpH, instance)
 	hDocBox = createReadOnlyMultilineEdit(hwnd, "", rightColX+4, paramGrpY+20, rightColW-8, docGrpH-26, idDocBox, instance)
 	setFontAll(guiFont, hDocGrp, hDocBox)
 
-	// ── ACTION BAR ────────────────────────────────────────────────────────
-	// Apply values and Save patched file sit side by side — the two steps of
-	// the workflow are visually grouped. Status fills the remaining width.
+	// ── ACTION ROWS ───────────────────────────────────────────────────────
+	// Row 1: Apply (current view) and Apply All on the left; status to the right.
+	// Row 2: Save patched file, aligned directly below the Apply buttons.
 
-	hApplyVBtn := createButton(hwnd, "Apply values", margin, actionBarY, actionBtnW, actionBarH, idApplyValues, instance)
-	hSaveBtn := createButton(hwnd, "Save patched file", margin+actionBtnW+gutter, actionBarY, 148, actionBarH, idSave, instance)
-	hStatusValue = createStatic(hwnd, "Enter a save path or click Browse.", margin+actionBtnW+gutter+148+gutter, actionBarY+7, 540, 18, instance)
-	setFontAll(guiFont, hApplyVBtn, hSaveBtn, hStatusValue)
+	hApplyViewBtn := createButton(hwnd, "Apply", margin, actionRow1Y, applyBtnW, actionRow1H, idApplyView, instance)
+	hApplyAllBtn := createButton(hwnd, "Apply All", margin+applyBtnW+gutter, actionRow1Y, applyBtnW, actionRow1H, idApplyValues, instance)
+	hStatusValue = createStatic(hwnd, "Enter a save path or click Browse.", margin+2*applyBtnW+2*gutter, actionRow1Y+7, 440, 18, instance)
+	hSaveBtn := createButton(hwnd, "Save patched file", margin, actionRow2Y, saveBtnW, actionRow2H, idSave, instance)
+	setFontAll(guiFont, hApplyViewBtn, hApplyAllBtn, hSaveBtn, hStatusValue)
 
 	// ── Initialise combo boxes and default view ───────────────────────────
 	initViewCombo()
@@ -1082,16 +1095,13 @@ func onParamScroll(code, thumbPos uint16) {
 	refreshView()
 }
 
-// applyCurrentEdits validates stagedValues and commits them to workingValues,
-// updating the Current column across all views at once.
+// applyCurrentEdits validates stagedValues and commits them to workingValues
+// for all views. In basic mode, advanced parameters are not committed.
 func applyCurrentEdits() {
 	if loaded == nil || workingValues == nil || stagedValues == nil {
 		setStatus("Load a file first.")
 		return
 	}
-	// In unlock-ranges mode only structural invariants are enforced; individual
-	// field limits are intentionally removed. In normal/advanced mode the full
-	// conservative validation applies.
 	var valErr error
 	if unlockRanges {
 		valErr = core.ValidateCrossFieldConstraints(*stagedValues)
@@ -1102,9 +1112,91 @@ func applyCurrentEdits() {
 		setStatus("Validation failed: " + valErr.Error())
 		return
 	}
-	*workingValues = *stagedValues
+	allViews := []params.ParamView{
+		params.ViewInvader, params.ViewSign, params.ViewSignPlace, params.ViewHunter, params.ViewTongue,
+	}
+	for _, v := range allViews {
+		for _, p := range params.ParamsForView(v) {
+			if !advancedMode && p.Advanced {
+				continue
+			}
+			if s := p.ValueString(*stagedValues); s != "" {
+				if n, err := strconv.Atoi(s); err == nil {
+					_ = p.SetFromInt(workingValues, n)
+				}
+			}
+		}
+	}
 	refreshView()
-	setStatus("All changes applied across all views. Save to write the patched file.")
+	setStatus("All views applied. Save to write the patched file.")
+}
+
+// applyCurrentViewEdits commits staged values for the current view only.
+// In basic mode, advanced parameters are not committed.
+func applyCurrentViewEdits() {
+	if loaded == nil || workingValues == nil || stagedValues == nil {
+		setStatus("Load a file first.")
+		return
+	}
+	var valErr error
+	if unlockRanges {
+		valErr = core.ValidateCrossFieldConstraints(*stagedValues)
+	} else {
+		valErr = core.ValidateNetworkParams(*stagedValues)
+	}
+	if valErr != nil {
+		setStatus("Validation failed: " + valErr.Error())
+		return
+	}
+	for _, p := range params.ParamsForView(currentView) {
+		if !advancedMode && p.Advanced {
+			continue
+		}
+		if s := p.ValueString(*stagedValues); s != "" {
+			if n, err := strconv.Atoi(s); err == nil {
+				_ = p.SetFromInt(workingValues, n)
+			}
+		}
+	}
+	refreshView()
+	setStatus(viewDisplayName(currentView) + " values applied.")
+}
+
+// resetToVanilla resets all parameters in all views to the shipped defaults.
+func resetToVanilla() {
+	if loaded == nil {
+		setStatus("Load a file first.")
+		return
+	}
+	result := win.MessageBox(mainHwnd,
+		utf16Ptr("This will reset ALL parameters in ALL views to the game's\r\nshipped defaults. Your staged and applied edits will be lost.\r\n\r\nContinue?"),
+		utf16Ptr("Reset to Vanilla"),
+		win.MB_YESNO|win.MB_ICONWARNING|win.MB_DEFBUTTON2,
+	)
+	if result != win.IDYES {
+		return
+	}
+	defaults := core.NetworkParamDefaults()
+	*workingValues = defaults
+	*stagedValues = defaults
+	refreshView()
+	setStatus("All parameters reset to vanilla.")
+}
+
+// viewDisplayName returns the human-readable label for a ParamView.
+func viewDisplayName(v params.ParamView) string {
+	switch v {
+	case params.ViewSign:
+		return "Find Signs"
+	case params.ViewSignPlace:
+		return "Place Sign"
+	case params.ViewHunter:
+		return "Hunter"
+	case params.ViewTongue:
+		return "Taunter's Tongue"
+	default:
+		return "Invader"
+	}
 }
 
 func savePatched(hwnd win.HWND) {
