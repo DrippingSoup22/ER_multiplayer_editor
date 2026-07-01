@@ -27,7 +27,7 @@ const (
 	Unconfirmed                        // effect uncertain; parameter may be vestigial or untested in ER
 )
 
-// ParamMeta describes a single tunable field: its labels, documentation, casual and advanced
+// ParamMeta describes a single tunable field: its labels, documentation,
 // slider bounds, and the key used to dispatch ValueString / SetFromInt.
 type ParamMeta struct {
 	Key      string
@@ -39,13 +39,9 @@ type ParamMeta struct {
 	// Advanced marks parameters that are hidden in casual mode.
 	Advanced bool
 
-	// Casual-mode slider bounds.
+	// Slider bounds.
 	Min float64
 	Max float64
-
-	// Unlock-ranges slider bounds — datatype ceiling/floor, no conservative limits.
-	UnlockMin float64
-	UnlockMax float64
 
 	// Confidence describes how well-established this parameter's effect is.
 	// Defaults to Confirmed (zero value) — only set explicitly for non-confirmed params.
@@ -67,15 +63,8 @@ type ParamMeta struct {
 func (p ParamMeta) MinInt() int { return int(p.Min) }
 func (p ParamMeta) MaxInt() int { return int(p.Max) }
 
-func (p ParamMeta) UnlockMinInt() int { return int(p.UnlockMin) }
-func (p ParamMeta) UnlockMaxInt() int { return int(p.UnlockMax) }
-
 func (p ParamMeta) RangeText() string {
 	return fmt.Sprintf("%.0f – %.0f", p.Min, p.Max)
-}
-
-func (p ParamMeta) RangeTextUnlock() string {
-	return fmt.Sprintf("%.0f – %.0f", p.UnlockMin, p.UnlockMax)
 }
 
 // ---------------------------------------------------------------------------

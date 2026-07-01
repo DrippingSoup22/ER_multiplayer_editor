@@ -35,7 +35,6 @@ This tool reads the parameter block, lets you change values through a guided int
 - **24 tunable parameters** with plain-English documentation and confidence indicators for every field
 - **Scrollable parameter list** — mouse wheel supported; scrollbar appears automatically when a view has more parameters than fit at once
 - **Advanced mode** — reveals additional hidden parameters and shows technical documentation (memory offsets, PARAMDEF IDs, vanilla values, cross-field constraints)
-- **Unlock ranges** — available inside Advanced mode; removes every numerical limit, allowing any value to be typed directly into the edit fields
 - **3 presets per view** — Vanilla (exact game defaults), Fast, Aggressive; in basic mode presets only affect visible parameters, in Advanced mode they also apply hidden ones
 - **Apply / Apply All** — commit edits for the current view only, or for all views at once
 - **Reset to vanilla** — one-click reset of every parameter in every view to the game's shipped defaults
@@ -83,17 +82,6 @@ Click the **Advanced** checkbox. Advanced mode:
 - Shows technical documentation for each field (PARAMDEF SortID, memory offset, vanilla value, validation range, cross-field constraints)
 
 > Advanced combinations can prevent multiplayer sessions from establishing. Keep a backup and test changes before distributing a patched file.
-
-### Unlock ranges
-
-When Advanced mode is on, an **Unlock ranges** checkbox appears. Enabling it:
-
-- Disables all sliders and removes every numerical limit
-- Values must be entered by typing directly into the edit fields
-
-> Values outside the tested ranges can produce undefined matchmaking behaviour or corrupt the parameter block. Apply the Vanilla preset at any time to restore safe defaults.
-
----
 
 ## Presets
 

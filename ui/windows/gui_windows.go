@@ -28,9 +28,8 @@ const (
 	idViewCombo    = 1005
 	idPresetCombo  = 1006
 	idApplyValues  = 1007
-	idAdvanced     = 1008
-	idUnlockRanges = 1009
-	idApplyView    = 1010
+	idAdvanced  = 1008
+	idApplyView = 1010
 	idResetAll     = 1011
 	idDocBox       = 1401
 
@@ -159,11 +158,9 @@ var (
 	workingValues *core.NetworkParamValues // committed values — shown in Current column
 	stagedValues  *core.NetworkParamValues // in-progress edits — shown in New column
 
-	// advancedWarnShown / unlockRangesWarnShown track whether the one-time
-	// informational message for each mode has already been shown this session.
-	advancedWarnShown     bool
-	unlockRanges          bool
-	unlockRangesWarnShown bool
+	// advancedWarnShown tracks whether the one-time informational message for
+	// Advanced mode has already been shown this session.
+	advancedWarnShown bool
 
 	// selectedPresetKeys remembers the last chosen preset key per view so that
 	// switching views and returning does not reset the preset combo to Vanilla.
@@ -182,9 +179,8 @@ var (
 	hSaveTypeValue     win.HWND
 	hViewCombo         win.HWND
 	hPresetCombo       win.HWND
-	hAdvancedCheck     win.HWND
-	hUnlockRangesCheck win.HWND
-	hParamScrollBar    win.HWND
+	hAdvancedCheck  win.HWND
+	hParamScrollBar win.HWND
 	hDocBox            win.HWND
 	hStatusValue       win.HWND
 
@@ -375,9 +371,6 @@ func wndProc(hwnd win.HWND, msg uint32, wParam, lParam uintptr) uintptr {
 		case idAdvanced:
 			onAdvancedToggle()
 			return 0
-		case idUnlockRanges:
-			onUnlockRangesToggle()
-			return 0
 		case idViewCombo:
 			if code == win.CBN_SELCHANGE {
 				onViewChanged()
@@ -486,7 +479,7 @@ func onCreate(hwnd win.HWND) {
 	setFontAll(guiFont, hFileLbl, hPathEdit, hBrowseBtn, hLoadBtn, hSaveTypeLbl, hSaveTypeValue)
 
 	// ── CONTROLS BAR ─────────────────────────────────────────────────────
-	// View + Preset on the left. Advanced + Unlock ranges right-aligned.
+	// View + Preset on the left. Advanced right-aligned.
 	// No group boxes — single clean horizontal row.
 
 	hViewLbl := createStatic(hwnd, "View:", margin, ctrlBarY+6, 38, 18, instance)
@@ -494,11 +487,9 @@ func onCreate(hwnd win.HWND) {
 	hPresetLbl := createStatic(hwnd, "Preset:", margin+196, ctrlBarY+6, 46, 18, instance)
 	hPresetCombo = createComboBox(hwnd, margin+246, ctrlBarY+2, 200, 200, idPresetCombo, instance)
 	hAdvancedCheck = createCheckbox(hwnd, "Advanced", int32(806), ctrlBarY+6, 90, 22, idAdvanced, instance)
-	hUnlockRangesCheck = createCheckbox(hwnd, "Unlock ranges", int32(906), ctrlBarY+6, 136, 22, idUnlockRanges, instance)
-	win.ShowWindow(hUnlockRangesCheck, win.SW_HIDE)
 
 	hResetBtn := createButton(hwnd, "Reset to vanilla", margin+246+200+16, ctrlBarY+2, 120, topBarH, idResetAll, instance)
-	setFontAll(guiFont, hViewLbl, hViewCombo, hPresetLbl, hPresetCombo, hAdvancedCheck, hUnlockRangesCheck, hResetBtn)
+	setFontAll(guiFont, hViewLbl, hViewCombo, hPresetLbl, hPresetCombo, hAdvancedCheck, hResetBtn)
 
 	// ── PARAMETERS GROUP BOX ─────────────────────────────────────────────
 	//
@@ -653,14 +644,6 @@ func onAdvancedToggle() {
 	}
 	advancedMode = checked
 	rowScrollOffset = 0
-	if !advancedMode {
-		// Turning off Advanced also resets Unlock ranges.
-		unlockRanges = false
-		win.SendMessage(hUnlockRangesCheck, win.BM_SETCHECK, win.BST_UNCHECKED, 0)
-		win.ShowWindow(hUnlockRangesCheck, win.SW_HIDE)
-	} else {
-		win.ShowWindow(hUnlockRangesCheck, win.SW_SHOW)
-	}
 	configureRowsForView(currentView, advancedMode)
 	refreshControlStates()
 	refreshView()
@@ -668,29 +651,6 @@ func onAdvancedToggle() {
 	if len(ps) > 0 {
 		updateDocForMeta(ps[0])
 	}
-}
-
-func onUnlockRangesToggle() {
-	checked := win.SendMessage(hUnlockRangesCheck, win.BM_GETCHECK, 0, 0) == win.BST_CHECKED
-	if checked && !unlockRangesWarnShown {
-		win.MessageBox(mainHwnd,
-			utf16Ptr("UNLOCK RANGES\r\n\r\n"+
-				"Disables all sliders and removes every numerical limit.\r\n"+
-				"Values can only be entered by typing in the edit fields\r\n"+
-				"— no boundaries apply.\r\n\r\n"+
-				"Risk: values outside tested ranges can break matchmaking\r\n"+
-				"or corrupt the save data. Apply the Vanilla preset at any\r\n"+
-				"time to restore safe defaults. Keep a backup of your\r\n"+
-				"save file before proceeding."),
-			utf16Ptr("Unlock Ranges"),
-			win.MB_OK|win.MB_ICONWARNING,
-		)
-		unlockRangesWarnShown = true
-	}
-	unlockRanges = checked
-	configureRowsForView(currentView, advancedMode) // update slider ranges and range text
-	refreshView()                                   // repopulate values cleared by configureRowsForView
-	refreshControlStates()
 }
 
 func onViewChanged() {
@@ -741,11 +701,7 @@ func configureRowsForView(v params.ParamView, advanced bool) {
 			setText(rows[i].label, p.Label)
 			setText(rows[i].current, "")
 			setText(rows[i].edit, "")
-			if unlockRanges {
-				setText(rows[i].rangeText, p.RangeTextUnlock())
-			} else {
-				setText(rows[i].rangeText, p.RangeText())
-			}
+			setText(rows[i].rangeText, p.RangeText())
 			configureSlider(rows[i].slider, p)
 			win.ShowWindow(rows[i].label, win.SW_SHOW)
 			win.ShowWindow(rows[i].current, win.SW_SHOW)
@@ -769,14 +725,9 @@ func configureRowsForView(v params.ParamView, advanced bool) {
 	updateParamScrollBar(len(ps))
 }
 
-// configureSlider sets the trackbar range based on unlockRanges (not advancedMode).
-// Advanced mode only controls which parameters are visible and what docs are shown;
-// the slider range is exclusively controlled by the Unlock ranges button.
+// configureSlider sets the trackbar range from the parameter's Min/Max bounds.
 func configureSlider(hwnd win.HWND, meta params.ParamMeta) {
 	lo, hi := meta.MinInt(), meta.MaxInt()
-	if unlockRanges {
-		lo, hi = meta.UnlockMinInt(), meta.UnlockMaxInt()
-	}
 	win.SendMessage(hwnd, tbmSetRangeMin, 1, uintptr(lo))
 	win.SendMessage(hwnd, tbmSetRangeMax, 1, uintptr(hi))
 	win.SendMessage(hwnd, tbmSetTicFreq, 0, 0)
@@ -917,11 +868,7 @@ func refreshView() {
 		n, _ := strconv.Atoi(staged)
 		win.SendMessage(rows[i].slider, tbmSetPos, 1, uintptr(n))
 		// Restore range text — cleared by clearFields but not reset by loadPath.
-		if unlockRanges {
-			setText(rows[i].rangeText, rows[i].meta.RangeTextUnlock())
-		} else {
-			setText(rows[i].rangeText, rows[i].meta.RangeText())
-		}
+		setText(rows[i].rangeText, rows[i].meta.RangeText())
 	}
 }
 
@@ -1023,9 +970,6 @@ func onRowEditChanged(idx int, code uint16) {
 	}
 	meta := rows[idx].meta
 	lo, hi := meta.MinInt(), meta.MaxInt()
-	if unlockRanges {
-		lo, hi = meta.UnlockMinInt(), meta.UnlockMaxInt()
-	}
 	if v < lo || v > hi {
 		// Snap the edit field back to the current staged value so it doesn't
 		// retain an out-of-range number after focus leaves.
@@ -1098,13 +1042,7 @@ func applyCurrentEdits() {
 		setStatus("Load a file first.")
 		return
 	}
-	var valErr error
-	if unlockRanges {
-		valErr = core.ValidateCrossFieldConstraints(*stagedValues)
-	} else {
-		valErr = core.ValidateNetworkParams(*stagedValues)
-	}
-	if valErr != nil {
+	if valErr := core.ValidateNetworkParams(*stagedValues); valErr != nil {
 		setStatus("Validation failed: " + valErr.Error())
 		return
 	}
@@ -1134,13 +1072,7 @@ func applyCurrentViewEdits() {
 		setStatus("Load a file first.")
 		return
 	}
-	var valErr error
-	if unlockRanges {
-		valErr = core.ValidateCrossFieldConstraints(*stagedValues)
-	} else {
-		valErr = core.ValidateNetworkParams(*stagedValues)
-	}
-	if valErr != nil {
+	if valErr := core.ValidateNetworkParams(*stagedValues); valErr != nil {
 		setStatus("Validation failed: " + valErr.Error())
 		return
 	}
@@ -1294,12 +1226,9 @@ func clearFields() {
 }
 
 // refreshControlStates applies the correct enabled/disabled state to every row
-// based on whether a file is loaded and whether Unlock ranges is active.
-//
-// slider: enabled when a file is loaded AND ranges are not unlocked.
-// edit:   enabled whenever a file is loaded.
+// based on whether a file is loaded.
 func refreshControlStates() {
-	sliderEnabled := loaded != nil && !unlockRanges
+	sliderEnabled := loaded != nil
 	editEnabled := loaded != nil
 	for i := 0; i < maxVisibleRows; i++ {
 		win.EnableWindow(rows[i].slider, sliderEnabled)
