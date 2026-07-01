@@ -105,15 +105,15 @@ var signPresets = []PresetMeta{
 	},
 	{
 		Key: "aggressive", View: ViewSign, Label: "Aggressive",
-		Description: "Near real-time sign responsiveness — all timers aligned at the practical floor below which the server cannot supply meaningfully different data between cycles.\r\n\r\n" +
+		Description: "Maximum sign responsiveness balanced against P2P mesh stability — timers set at 15 s, the fastest cadence that gives cross-region P2P handshakes room to complete.\r\n\r\n" +
 			"The pool is expanded to its practical maximum to accommodate the densest co-op areas. " +
 			"All pool parameters are scaled together to maintain the required invariant.",
 		Apply: func(v core.NetworkParamValues) core.NetworkParamValues {
-			v.ReloadSignIntervalTime2 = 10.0
+			v.ReloadSignIntervalTime2 = 15.0
 			v.ReloadSignTotalCount = 64
 			v.ReloadSignCellCount = 32
-			v.SingGetMax = 96
-			v.SignDownloadSpan = 10.0
+			v.SingGetMax = 64
+			v.SignDownloadSpan = 15.0
 			v.ReloadSignIntervalTime1 = 0.0
 			v.SignCellRangeH = 2
 			v.SignCellRangeUp = 2

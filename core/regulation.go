@@ -253,18 +253,19 @@ func NetworkParamAggressiveReds() NetworkParamValues {
 }
 
 // NetworkParamAggressiveSummons returns the "Aggressive Summon Signs" preset
-// (Cooperator role). Fastest sign refresh/upload and the largest internally
-// consistent sign buffer (cellCount <= totalCount <= singGetMax: 32 <= 64 <= 96).
-// Controls the summon-sign network path only; Summoning Pool activation is a
-// separate World/Exploration feature. cellGroup* ranges are left untouched.
+// (Cooperator role). Fast sign refresh/upload with the largest internally
+// consistent sign buffer (cellCount <= totalCount <= singGetMax: 32 <= 64 <= 64).
+// Timers set at 15 s — fastest cadence that gives cross-region P2P handshakes
+// room to complete. Controls the summon-sign network path only; Summoning Pool
+// activation is a separate World/Exploration feature. cellGroup* left untouched.
 func NetworkParamAggressiveSummons() NetworkParamValues {
 	d := NetworkParamDefaults()
-	d.ReloadSignIntervalTime2 = 10.0
+	d.ReloadSignIntervalTime2 = 15.0
 	d.ReloadSignTotalCount = 64
 	d.ReloadSignCellCount = 32
 	d.UpdateSignIntervalTime = 10.0
-	d.SingGetMax = 96
-	d.SignDownloadSpan = 10.0
+	d.SingGetMax = 64
+	d.SignDownloadSpan = 15.0
 	d.SignUpdateSpan = 10.0
 	return d
 }
@@ -300,7 +301,7 @@ func NetworkParamFastSummons() NetworkParamValues {
 func NetworkParamFastBlue() NetworkParamValues {
 	d := NetworkParamDefaults()
 	d.ReloadVisitListCoolTime = 5.0
-	d.MaxCoopBlueSummonCount = 4
+	d.MaxCoopBlueSummonCount = 2
 	d.MaxVisitListCount = 15
 	d.ReloadSearchCoopBlueMin = 10.0
 	d.ReloadSearchCoopBlueMax = 30.0
@@ -376,67 +377,67 @@ func ValidateNetworkParams(p NetworkParamValues) error {
 	if p.MaxBreakInTargetListCount < 1 || p.MaxBreakInTargetListCount > 20 {
 		return fmt.Errorf("maxBreakInTargetListCount must be 1-20, got %d", p.MaxBreakInTargetListCount)
 	}
-	if p.BreakInRequestIntervalTimeSec < 2.0 || p.BreakInRequestIntervalTimeSec > 999.0 {
-		return fmt.Errorf("breakInRequestIntervalTimeSec must be 2-999, got %.0f", p.BreakInRequestIntervalTimeSec)
+	if p.BreakInRequestIntervalTimeSec < 4.0 || p.BreakInRequestIntervalTimeSec > 30.0 {
+		return fmt.Errorf("breakInRequestIntervalTimeSec must be 4-30, got %.0f", p.BreakInRequestIntervalTimeSec)
 	}
-	if p.BreakInRequestTimeOutSec < 3.0 || p.BreakInRequestTimeOutSec > 999.0 {
-		return fmt.Errorf("breakInRequestTimeOutSec must be 3-999, got %.0f", p.BreakInRequestTimeOutSec)
+	if p.BreakInRequestTimeOutSec < 4.0 || p.BreakInRequestTimeOutSec > 20.0 {
+		return fmt.Errorf("breakInRequestTimeOutSec must be 4-20, got %.0f", p.BreakInRequestTimeOutSec)
 	}
-	if p.BreakInRequestAreaCount < 1 || p.BreakInRequestAreaCount > 50 {
-		return fmt.Errorf("breakInRequestAreaCount must be 1-50, got %d", p.BreakInRequestAreaCount)
+	if p.BreakInRequestAreaCount < 1 || p.BreakInRequestAreaCount > 20 {
+		return fmt.Errorf("breakInRequestAreaCount must be 1-20, got %d", p.BreakInRequestAreaCount)
 	}
 	// Cooperator
-	if p.SummonTimeoutTime < 1.0 || p.SummonTimeoutTime > 1000.0 {
-		return fmt.Errorf("summonTimeoutTime must be 1-1000, got %.0f", p.SummonTimeoutTime)
+	if p.SummonTimeoutTime < 10.0 || p.SummonTimeoutTime > 120.0 {
+		return fmt.Errorf("summonTimeoutTime must be 10-120, got %.0f", p.SummonTimeoutTime)
 	}
-	if p.ReloadSignIntervalTime1 < 0.0 || p.ReloadSignIntervalTime1 > 1000.0 {
-		return fmt.Errorf("reloadSignIntervalTime1 must be 0-1000, got %.0f", p.ReloadSignIntervalTime1)
+	if p.ReloadSignIntervalTime1 < 0.0 || p.ReloadSignIntervalTime1 > 120.0 {
+		return fmt.Errorf("reloadSignIntervalTime1 must be 0-120, got %.0f", p.ReloadSignIntervalTime1)
 	}
-	if p.ReloadSignIntervalTime2 < 1.0 || p.ReloadSignIntervalTime2 > 1000.0 {
-		return fmt.Errorf("reloadSignIntervalTime2 must be 1-1000, got %.0f", p.ReloadSignIntervalTime2)
+	if p.ReloadSignIntervalTime2 < 10.0 || p.ReloadSignIntervalTime2 > 60.0 {
+		return fmt.Errorf("reloadSignIntervalTime2 must be 10-60, got %.0f", p.ReloadSignIntervalTime2)
 	}
-	if p.ReloadSignTotalCount < 1 || p.ReloadSignTotalCount > 128 {
-		return fmt.Errorf("reloadSignTotalCount must be 1-128, got %d", p.ReloadSignTotalCount)
+	if p.ReloadSignTotalCount < 5 || p.ReloadSignTotalCount > 64 {
+		return fmt.Errorf("reloadSignTotalCount must be 5-64, got %d", p.ReloadSignTotalCount)
 	}
-	if p.ReloadSignCellCount < 1 || p.ReloadSignCellCount > 99 {
-		return fmt.Errorf("reloadSignCellCount must be 1-99, got %d", p.ReloadSignCellCount)
+	if p.ReloadSignCellCount < 1 || p.ReloadSignCellCount > 32 {
+		return fmt.Errorf("reloadSignCellCount must be 1-32, got %d", p.ReloadSignCellCount)
 	}
-	if p.UpdateSignIntervalTime < 1.0 || p.UpdateSignIntervalTime > 1000.0 {
-		return fmt.Errorf("updateSignIntervalTime must be 1-1000, got %.0f", p.UpdateSignIntervalTime)
+	if p.UpdateSignIntervalTime < 10.0 || p.UpdateSignIntervalTime > 30.0 {
+		return fmt.Errorf("updateSignIntervalTime must be 10-30, got %.0f", p.UpdateSignIntervalTime)
 	}
-	if p.SignCellRangeH < 1 || p.SignCellRangeH > 255 {
-		return fmt.Errorf("signCellRangeH must be 1-255, got %d", p.SignCellRangeH)
+	if p.SignCellRangeH < 1 || p.SignCellRangeH > 5 {
+		return fmt.Errorf("signCellRangeH must be 1-5, got %d", p.SignCellRangeH)
 	}
-	if p.SignCellRangeUp < 1 || p.SignCellRangeUp > 255 {
-		return fmt.Errorf("signCellRangeUp must be 1-255, got %d", p.SignCellRangeUp)
+	if p.SignCellRangeUp < 1 || p.SignCellRangeUp > 5 {
+		return fmt.Errorf("signCellRangeUp must be 1-5, got %d", p.SignCellRangeUp)
 	}
-	if p.SignCellRangeDown < 1 || p.SignCellRangeDown > 255 {
-		return fmt.Errorf("signCellRangeDown must be 1-255, got %d", p.SignCellRangeDown)
+	if p.SignCellRangeDown < 1 || p.SignCellRangeDown > 5 {
+		return fmt.Errorf("signCellRangeDown must be 1-5, got %d", p.SignCellRangeDown)
 	}
-	if p.SingGetMax < 1 || p.SingGetMax > 128 {
-		return fmt.Errorf("singGetMax must be 1-128, got %d", p.SingGetMax)
+	if p.SingGetMax < 10 || p.SingGetMax > 64 {
+		return fmt.Errorf("singGetMax must be 10-64, got %d", p.SingGetMax)
 	}
-	if p.SignDownloadSpan < 1.0 || p.SignDownloadSpan > 1000.0 {
-		return fmt.Errorf("signDownloadSpan must be 1-1000, got %.0f", p.SignDownloadSpan)
+	if p.SignDownloadSpan < 10.0 || p.SignDownloadSpan > 30.0 {
+		return fmt.Errorf("signDownloadSpan must be 10-30, got %.0f", p.SignDownloadSpan)
 	}
-	if p.SignUpdateSpan < 1.0 || p.SignUpdateSpan > 1000.0 {
-		return fmt.Errorf("signUpdateSpan must be 1-1000, got %.0f", p.SignUpdateSpan)
+	if p.SignUpdateSpan < 10.0 || p.SignUpdateSpan > 60.0 {
+		return fmt.Errorf("signUpdateSpan must be 10-60, got %.0f", p.SignUpdateSpan)
 	}
 	// Blue
-	if p.ReloadVisitListCoolTime < 1.0 || p.ReloadVisitListCoolTime > 1000.0 {
-		return fmt.Errorf("reloadVisitListCoolTime must be 1-1000, got %.0f", p.ReloadVisitListCoolTime)
+	if p.ReloadVisitListCoolTime < 5.0 || p.ReloadVisitListCoolTime > 20.0 {
+		return fmt.Errorf("reloadVisitListCoolTime must be 5-20, got %.0f", p.ReloadVisitListCoolTime)
 	}
-	if p.MaxCoopBlueSummonCount < 1 || p.MaxCoopBlueSummonCount > 10 {
-		return fmt.Errorf("maxCoopBlueSummonCount must be 1-10, got %d", p.MaxCoopBlueSummonCount)
+	if p.MaxCoopBlueSummonCount < 1 || p.MaxCoopBlueSummonCount > 2 {
+		return fmt.Errorf("maxCoopBlueSummonCount must be 1-2, got %d", p.MaxCoopBlueSummonCount)
 	}
-	if p.MaxVisitListCount < 1 || p.MaxVisitListCount > 50 {
-		return fmt.Errorf("maxVisitListCount must be 1-50, got %d", p.MaxVisitListCount)
+	if p.MaxVisitListCount < 1 || p.MaxVisitListCount > 20 {
+		return fmt.Errorf("maxVisitListCount must be 1-20, got %d", p.MaxVisitListCount)
 	}
-	if p.ReloadSearchCoopBlueMin < 1.0 || p.ReloadSearchCoopBlueMin > 999.0 {
-		return fmt.Errorf("reloadSearchCoopBlueMin must be 1-999, got %.0f", p.ReloadSearchCoopBlueMin)
+	if p.ReloadSearchCoopBlueMin < 5.0 || p.ReloadSearchCoopBlueMin > 30.0 {
+		return fmt.Errorf("reloadSearchCoopBlueMin must be 5-30, got %.0f", p.ReloadSearchCoopBlueMin)
 	}
-	if p.ReloadSearchCoopBlueMax < 1.0 || p.ReloadSearchCoopBlueMax > 999.0 {
-		return fmt.Errorf("reloadSearchCoopBlueMax must be 1-999, got %.0f", p.ReloadSearchCoopBlueMax)
+	if p.ReloadSearchCoopBlueMax < 20.0 || p.ReloadSearchCoopBlueMax > 180.0 {
+		return fmt.Errorf("reloadSearchCoopBlueMax must be 20-180, got %.0f", p.ReloadSearchCoopBlueMax)
 	}
 	if p.AllAreaSearchRateCoopBlue < 0 || p.AllAreaSearchRateCoopBlue > 100 {
 		return fmt.Errorf("allAreaSearchRateCoopBlue must be 0-100, got %d", p.AllAreaSearchRateCoopBlue)
@@ -466,9 +467,8 @@ func ValidateNetworkParams(p NetworkParamValues) error {
 }
 
 // ValidateCrossFieldConstraints checks only the structural invariants that must
-// hold regardless of whether Unlock ranges is active. Used in place of
-// ValidateNetworkParams when the caller intentionally permits out-of-casual-range
-// values (i.e. the Unlock ranges mode in the UI).
+// hold independently of per-field bounds. Called by ValidateNetworkParams after
+// individual field checks, and available as a standalone check where needed.
 func ValidateCrossFieldConstraints(p NetworkParamValues) error {
 	if p.ReloadSignCellCount > p.ReloadSignTotalCount {
 		return fmt.Errorf("sign pool per-cell cap (%d) must not exceed total pool (%d)", p.ReloadSignCellCount, p.ReloadSignTotalCount)
