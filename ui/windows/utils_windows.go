@@ -142,7 +142,7 @@ func createGroupBox(parent win.HWND, text string, x, y, w, h int32, instance win
 func openFileDialog(owner win.HWND) (string, bool, error) {
 	buf := make([]uint16, 4096)
 	filter := utf16FromMultiString(
-		"Save files (*.dat;*.sl2)", "*.dat;*.sl2",
+		"PS4 saves (memory.dat)", "*.dat",
 		"All files (*.*)", "*.*",
 	)
 
@@ -176,7 +176,7 @@ func saveFileDialog(owner win.HWND, defaultName string) (string, bool, error) {
 	copy(buf, syscall.StringToUTF16(defaultName))
 
 	filter := utf16FromMultiString(
-		"Save files (*.dat;*.sl2)", "*.dat;*.sl2",
+		"PS4 saves (*.dat)", "*.dat",
 		"All files (*.*)", "*.*",
 	)
 

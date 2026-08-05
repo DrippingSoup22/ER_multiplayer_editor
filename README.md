@@ -1,150 +1,162 @@
 # ER PvP Mod — Elden Ring Multiplayer Parameter Editor
 
-A Windows GUI tool that edits the network parameters stored inside an Elden Ring save file, letting you tune invasion frequency, summon sign responsiveness, and hunter dispatch speed without touching the game files.
+ER PvP Mod is a free Windows save editor for **Elden Ring on PS4**. It edits
+the network parameters embedded in a decrypted `memory.dat`, allowing you to
+tune invasion searches, summon-sign refreshes, sign uploads, and Blue Cipher
+Ring dispatch behavior without changing the installed game files.
 
-**Edits only take effect on PS4.** The PS4 game reads these parameters from the save file on the second launch after modification. On PC the game re-fetches all network parameters from FromSoftware's servers at every login, overwriting the save — PC saves can be loaded and modified but changes will have no in-game effect.
+**[Download the latest release →](../../releases/latest)**
 
-> **Back up your save before making any changes.** The tool writes directly to your save file on "Save patched file". A corrupt save cannot be recovered without a backup.
+## Read this first
 
----
+- **Always keep an untouched backup.** Never experiment on your only save.
+- The input must already be decrypted. PlayStation's outer save encryption and
+  signing are separate from this editor; use your normal save-management tool
+  before and after editing.
+- Only PS4 `memory.dat` files are supported. PC saves are intentionally rejected
+  because the PC game downloads vanilla network parameters at every login.
+- Changes are staged in memory and written only after you select **Save patched
+  file**. The suggested output name ends in `_edited.dat`.
+- Multiplayer behavior is partly server-controlled and community-understood.
+  No modified save can be guaranteed risk-free for online play.
 
-## How it works
+### Important: applying changes while playing online
 
-Elden Ring stores a set of timing and capacity values in `NETWORK_PARAM_ST` inside your save file. These control how aggressively the game searches for multiplayer sessions — how often it polls the server, how many candidates it fetches, how long it waits for a connection, and so on.
+When Elden Ring connects online on PlayStation, the server restores these
+network parameters when a character is loaded for the first time. To make the
+edited values take effect:
 
-**On PS4**, the game reads these values from the save file on the second launch after it has been modified. Edits made with this tool take effect in-game.
+1. Start Elden Ring and load the character.
+2. Exit that character back to the title menu **without closing the game**.
+3. Load the character again in the same game session.
 
-**On PC**, the game re-fetches all network parameters from FromSoftware's servers at every login, overwriting whatever is in the save file. Edits made at the save level have no runtime effect on PC.
+The edited parameters are used after the second character load. Do not close
+Elden Ring between steps 2 and 3.
 
-This tool reads the parameter block, lets you change values through a guided interface, and writes the result back to the file.
+## Quick start
 
----
+1. Download the Windows ZIP from the latest release, extract it, and run
+   `ERPvPMod.exe`.
+2. Back up and decrypt your PS4 save with your usual save tool.
+3. Select **Browse...**, choose the decrypted `memory.dat`, and select **Load**.
+4. Choose a view, adjust values directly or select a preset, then select
+   **Apply** for that view or **Apply All** for every view.
+5. Select **Save patched file** and choose a new destination.
+6. Prepare the output for your console with the same external save workflow.
+7. If you play online, follow the two-load procedure above.
 
-## Supported save formats
-
-| Format | File | Edits take effect |
-|--------|------|-------------------|
-| PS4 save | `memory.dat` | Yes — on the second launch after modifying |
-| PC save | `ER0000.sl2` | No — server parameters overwrite save on login |
-
----
+Before an output file is written, the editor validates every value, rebuilds
+the embedded regulation data with the PS4-compatible Zstandard frame layout,
+decompresses it for an exact data check, re-encrypts it, and parses the final
+result back to confirm every requested value.
 
 ## Features
 
-- **4 parameter views** — Invader, Find Signs, Place Sign, Hunter
-- **24 tunable parameters** with plain-English documentation and confidence indicators for every field
-- **Scrollable parameter list** — mouse wheel supported; scrollbar appears automatically when a view has more parameters than fit at once
-- **Advanced mode** — reveals additional hidden parameters and shows technical documentation (memory offsets, PARAMDEF IDs, vanilla values, cross-field constraints)
-- **3 presets per view** — Vanilla (exact game defaults), Fast, Aggressive; in basic mode presets only affect visible parameters, in Advanced mode they also apply hidden ones
-- **Apply / Apply All** — commit edits for the current view only, or for all views at once
-- **Reset to vanilla** — one-click reset of every parameter in every view to the game's shipped defaults
-- **Non-destructive editing** — changes are staged in memory and only written on explicit save
-- **Current vs new** display — the left column always shows what is on disk; the right column shows your pending edits
-- **Save warning** — if any parameter with an unconfirmed effect has been modified, a confirmation prompt appears before the file picker
+### Four focused views
 
----
+- **Invader** — candidate-list size, request cadence, timeout, and search area.
+- **Find Signs** — host-side sign-pool capacity, refresh timing, summon timeout,
+  and search-cell coverage.
+- **Place Sign** — phantom-side heartbeat and upload cadence for a placed sign.
+- **Hunter** — Blue Cipher Ring polling, candidate capacity, timing, and
+  all-area search rates.
 
-## How to use
+The editor exposes 24 parameters. Each field includes a plain-English
+explanation, its valid range, and—where applicable—a warning or confidence
+label.
 
-1. **Open your save file**
-   - Click **Browse…** and select your `memory.dat` (PS4) or `ER0000.sl2` (PC)
-   - The *Save type* indicator in the top bar confirms the format was recognised
+### Presets and editing controls
 
-2. **Choose a view**
-   - **Invader** — how often and how broadly the game searches for invasion targets
-   - **Find Signs** — sign pool size, refresh rate, and summon timeout (host side)
-   - **Place Sign** — heartbeat and upload cadence for keeping your own sign alive (phantom side)
-   - **Hunter** — Blue Cipher Ring dispatch frequency and search coverage
-
-3. **Edit values**
-   - Drag a slider, type in an edit field, or pick a preset from the dropdown
-   - Changes are previewed in the *New value* column without touching the file
-   - Click a parameter name or edit field to read its full documentation in the right panel
-   - Switch views freely — edits persist across all views until you save
-
-4. **Commit and save**
-   - Click **Apply** to lock edits for the current view, or **Apply All** to commit every view at once — locked values appear in the *Current* column
-   - Use **Reset to vanilla** (controls bar, next to the preset dropdown) to discard all staged and committed edits and return every parameter to the game's shipped defaults
-   - Click **Save patched file** to write the modified save to disk (a file picker will appear)
-
-5. **Make it take effect (PS4 only)**
-   - Copy the patched `memory.dat` back to your PS4
-   - **Launch the game → quit to the main menu or close it → launch again**
-   - On the second launch the game reads the network parameters from the save file
-
----
-
-## Advanced mode
-
-Click the **Advanced** checkbox. Advanced mode:
-
-- Reveals parameters not exposed in the standard view
-- Shows technical documentation for each field (PARAMDEF SortID, memory offset, vanilla value, validation range, cross-field constraints)
-
-> Advanced combinations can prevent multiplayer sessions from establishing. Keep a backup and test changes before distributing a patched file.
-
-## Presets
-
-Each view has three presets:
+Every view provides three presets:
 
 | Preset | Intent |
-|--------|--------|
-| **Vanilla** | Exact values shipped with the game |
-| **Fast** | Meaningful improvement, server-friendly cadence |
-| **Aggressive** | Near the practical speed ceiling while keeping cross-region connections viable |
+|---|---|
+| **Vanilla** | Restore the values shipped with the game |
+| **Fast** | A noticeable improvement with a moderate request cadence |
+| **Aggressive** | The practical speed ceiling within the editor's safety bounds |
 
-Selecting a preset updates the *New value* column immediately. Click **Apply** or **Apply All** to commit. In basic mode, presets only affect visible parameters — enable Advanced mode first to have presets also apply hidden parameters.
+- **Current** shows the applied in-memory value; **New value** shows the pending
+  edit.
+- **Apply** commits only the current view; **Apply All** commits every view.
+- **Reset to vanilla** restores all four views to the shipped defaults.
+- Presets affect visible parameters in standard mode and include hidden fields
+  when Advanced mode is enabled.
+- Cross-field constraints are enforced, including sign-pool capacity ordering
+  and Hunter minimum/maximum search timing.
 
----
+### Advanced mode and confidence labels
 
-## Parameter confidence indicators
+Advanced mode reveals additional fields and technical details such as PARAMDEF
+SortIDs, row offsets, vanilla values, and cross-field constraints.
 
-Each parameter's documentation panel shows how well its effect is understood:
+- No badge means the effect is reasonably established through available game
+  data and community findings.
+- **COMMUNITY-INFERRED** means the interpretation is not officially documented.
+- **UNCONFIRMED** means the field may be unused or its Elden Ring behavior has
+  not been established.
 
-- **No badge** — effect confirmed; consistent with community findings
-- **[ COMMUNITY-INFERRED ]** — effect understood through community testing, not officially documented by FromSoftware
-- **[ UNCONFIRMED ]** — in-game effect uncertain or untested in Elden Ring; parameter may be vestigial
+The editor asks for confirmation before saving when an unconfirmed field differs
+from vanilla. Advanced combinations can still prevent a multiplayer session
+from establishing, so change one group at a time and retain a backup.
 
-Parameters with known constraints or limitations also display a **⚠ WARNING** notice. The tool will prompt for confirmation before saving if any unconfirmed parameter has been modified.
+## Compatibility with ER Merchant Editor
 
----
+The latest ER PvP Mod and
+[ER Merchant Editor](https://github.com/DrippingSoup22/ER_merchant_editor) can
+be used on the same decrypted save in either order. They patch different param
+tables and both fully decompress, rebuild, verify, and recompress the embedded
+regulation data. Always use the newest releases and pass the output of the first
+editor into the second; older ER PvP Mod builds used a faulty compression
+strategy and must not be used.
 
-## Notes and caveats
+## Limitations
 
-- `allAreaSearchRateBellGuard` is a legacy field from Dark Souls 2's Bell Keeper system. Its in-game effect in Elden Ring is unconfirmed.
-- `BreakInRequestAreaCount` is deliberately hidden by FromSoftware in the public PARAMDEF (labelled as unused padding). Its server-side behaviour is community-inferred.
+- The editor supports decrypted PS4 `memory.dat` files only. It does not open PC
+  `.sl2` files or decrypt, encrypt, or sign the outer PlayStation save container.
+- Server-side matchmaking rules and player population still apply; faster local
+  polling cannot create eligible sessions or bypass normal matchmaking ranges.
+- `BreakInRequestAreaCount` is hidden as padding in the public PARAMDEF; its
+  server-side meaning is community-inferred.
+- `allAreaSearchRateBellGuard` is inherited from an older Bell Keeper system and
+  its effect in Elden Ring is unconfirmed.
+- No modified save can be guaranteed safe from online enforcement.
 
----
+See [Save format and write-back safety](docs/WRITEBACK.md) for the technical
+pipeline and file-size assumptions.
 
 ## Building from source
 
-Requires Go 1.23+ and the MinGW cross-compiler (`x86_64-w64-mingw32-gcc`) for Windows targets.
+The required Go version is declared in `go.mod`. The Windows executable
+cross-compiles without cgo, so a C compiler is not required.
 
-```bash
+```sh
 git clone https://github.com/DrippingSoup22/ER_multiplayer_editor
 cd ER_multiplayer_editor
-make gui          # produces bin/er_pvp_mod_gui.exe
+make gui
 ```
 
----
+The executable is written to `bin/er_pvp_mod_gui.exe`.
+
+To create the same versioned ZIP used for a public release:
+
+```sh
+VERSION=2.7.0 make release
+```
+
+The archive is written to `dist/ER-PvP-Mod-windows-amd64-2.7.0.zip`.
 
 ## Windows security note
 
-When you download and run the executable for the first time, Windows may show a *"Windows protected your PC"* SmartScreen warning because the file is not digitally signed. This is normal for open-source tools distributed without a paid code-signing certificate.
+Windows SmartScreen may show **Windows protected your PC** the first time the
+unsigned executable is launched. This project does not currently use a paid
+code-signing certificate. To proceed, select **More info**, then **Run anyway**.
 
-To proceed: click **More info**, then **Run anyway**.
+## License and attribution
 
----
+GPLv3 — see [LICENSE](LICENSE). The regulation parsing core is adapted from the
+GPLv3-licensed
+[EldenRing-SaveForge](https://github.com/oisis/EldenRing-SaveForge) project by
+oisis. The PS4-compatible Zstandard frame settings follow the behavior documented
+by [SoulsFormats](https://github.com/JKAnderson/SoulsFormats).
 
-## License
-
-GPL v3 — see [LICENSE](LICENSE) for details.
-
-The regulation parsing core (`core/regulation.go`) is adapted from [EldenRing-SaveForge](https://github.com/oisis/EldenRing-SaveForge) by oisis, which is also GPL v3. This project's GPL v3 license is a direct consequence of that dependency.
-
----
-
-## Credits
-
-- Regulation parsing core adapted from [EldenRing-SaveForge](https://github.com/oisis/EldenRing-SaveForge) by oisis
-- PC save format (`.sl2` BND4 layout) reverse-engineered with reference to [ER-Save-Lib](https://github.com/ClayAmore/ER-Save-Lib) and [SoulsFormats](https://github.com/JKAnderson/SoulsFormats)
+ER PvP Mod is not affiliated with FromSoftware or Bandai Namco.

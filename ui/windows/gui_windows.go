@@ -836,12 +836,7 @@ func loadPath(path string) {
 	rowScrollOffset = 0
 	refreshControlStates()
 
-	switch in.kind {
-	case kindPS4Full:
-		setText(hSaveTypeValue, "PS4 (memory.dat)")
-	case kindPCFull:
-		setText(hSaveTypeValue, "PC (ER0000.sl2)")
-	}
+	setText(hSaveTypeValue, "PS4 (memory.dat)")
 
 	refreshView()
 	setStatus("File loaded.")

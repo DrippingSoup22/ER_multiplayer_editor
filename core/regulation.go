@@ -2,10 +2,8 @@ package core
 
 import (
 	"bytes"
-	"compress/flate"
 	"crypto/aes"
 	"crypto/cipher"
-	"crypto/md5"
 	"encoding/binary"
 	"fmt"
 	"io"
@@ -16,7 +14,7 @@ import (
 )
 
 // regulationKey is the AES-256-CBC key used to encrypt/decrypt regulation.bin
-// inside UserData11 (both PC and PS4 saves use the same key).
+// inside UserData11 in a PS4 save.
 var regulationKey = []byte{
 	0x99, 0xBF, 0xFC, 0x36, 0x6A, 0x6B, 0xC8, 0xC6,
 	0xF5, 0x82, 0x7D, 0x09, 0x36, 0x02, 0xD6, 0x76,
@@ -26,13 +24,14 @@ var regulationKey = []byte{
 
 const (
 	ud11UnkSize = 0x10
-	ud11MD5Size = 0x10
 
 	dcxMagic  = "DCX\x00"
 	bnd4Magic = "BND4"
 
-	dcxFormatDFLT = "DFLT"
 	dcxFormatZSTD = "ZSTD"
+
+	// SoulsFormats writes FromSoftware ZSTD streams with windowLog=16.
+	soulsFormatsWindowSize = 1 << 16
 
 	networkParamName = "NetworkParam.param"
 
@@ -52,8 +51,8 @@ const (
 	// 0x2C–0x3B: render-only fields (basicExclusiveRange/Height, previewChrWaitingTime, signVisibleRange).
 	// Cell-range fields are stored as u32 (4 bytes each) — XML note "実際はu8" means the value fits u8,
 	// not that the storage is 1 byte. Layout: 3×u32 (12 B) + 6×f32 keyword-scale (24 B) = 36 B → singGetMax at 0x60 ✓
-	offsetSignCellRangeH   = 0x3C // u32 — SortID 113 — 召喚サイン取得セル範囲(水平)
-	offsetSignCellRangeUp  = 0x40 // u32 — SortID 114 — 召喚サイン取得セル範囲(上方向)
+	offsetSignCellRangeH    = 0x3C // u32 — SortID 113 — 召喚サイン取得セル範囲(水平)
+	offsetSignCellRangeUp   = 0x40 // u32 — SortID 114 — 召喚サイン取得セル範囲(上方向)
 	offsetSignCellRangeDown = 0x44 // u32 — SortID 115 — 召喚サイン取得セル範囲(下方向)
 	offsetSingGetMax        = 0x60 // s32 — SortID 122 — サイン取得上限
 	offsetSignDownloadSpan  = 0x64 // f32 — SortID 123 — サインダウンロードスパン
@@ -233,7 +232,7 @@ func NetworkParamFasterBlue() NetworkParamValues {
 
 // --- Aggressive functional presets (v0.10) ---
 //
-// Stronger, clearly observable per-group profiles for PS5 PvP testing. Like the
+// Stronger, clearly observable per-group profiles for PlayStation PvP testing. Like the
 // Faster presets they are strictly modular: each touches only its own role group,
 // never the unconfirmed 0x7C field (BreakInRequestAreaCount), never Visitor
 // fields, never another group. They do NOT restore the removed global "Aggressive"
@@ -377,23 +376,23 @@ func ValidateNetworkParams(p NetworkParamValues) error {
 	if p.MaxBreakInTargetListCount < 1 || p.MaxBreakInTargetListCount > 20 {
 		return fmt.Errorf("maxBreakInTargetListCount must be 1-20, got %d", p.MaxBreakInTargetListCount)
 	}
-	if p.BreakInRequestIntervalTimeSec < 4.0 || p.BreakInRequestIntervalTimeSec > 30.0 {
+	if !finiteInRange(p.BreakInRequestIntervalTimeSec, 4.0, 30.0) {
 		return fmt.Errorf("breakInRequestIntervalTimeSec must be 4-30, got %.0f", p.BreakInRequestIntervalTimeSec)
 	}
-	if p.BreakInRequestTimeOutSec < 4.0 || p.BreakInRequestTimeOutSec > 20.0 {
+	if !finiteInRange(p.BreakInRequestTimeOutSec, 4.0, 20.0) {
 		return fmt.Errorf("breakInRequestTimeOutSec must be 4-20, got %.0f", p.BreakInRequestTimeOutSec)
 	}
 	if p.BreakInRequestAreaCount < 1 || p.BreakInRequestAreaCount > 20 {
 		return fmt.Errorf("breakInRequestAreaCount must be 1-20, got %d", p.BreakInRequestAreaCount)
 	}
 	// Cooperator
-	if p.SummonTimeoutTime < 10.0 || p.SummonTimeoutTime > 120.0 {
+	if !finiteInRange(p.SummonTimeoutTime, 10.0, 120.0) {
 		return fmt.Errorf("summonTimeoutTime must be 10-120, got %.0f", p.SummonTimeoutTime)
 	}
-	if p.ReloadSignIntervalTime1 < 0.0 || p.ReloadSignIntervalTime1 > 120.0 {
+	if !finiteInRange(p.ReloadSignIntervalTime1, 0.0, 120.0) {
 		return fmt.Errorf("reloadSignIntervalTime1 must be 0-120, got %.0f", p.ReloadSignIntervalTime1)
 	}
-	if p.ReloadSignIntervalTime2 < 10.0 || p.ReloadSignIntervalTime2 > 60.0 {
+	if !finiteInRange(p.ReloadSignIntervalTime2, 10.0, 60.0) {
 		return fmt.Errorf("reloadSignIntervalTime2 must be 10-60, got %.0f", p.ReloadSignIntervalTime2)
 	}
 	if p.ReloadSignTotalCount < 5 || p.ReloadSignTotalCount > 64 {
@@ -402,7 +401,7 @@ func ValidateNetworkParams(p NetworkParamValues) error {
 	if p.ReloadSignCellCount < 1 || p.ReloadSignCellCount > 32 {
 		return fmt.Errorf("reloadSignCellCount must be 1-32, got %d", p.ReloadSignCellCount)
 	}
-	if p.UpdateSignIntervalTime < 10.0 || p.UpdateSignIntervalTime > 30.0 {
+	if !finiteInRange(p.UpdateSignIntervalTime, 10.0, 30.0) {
 		return fmt.Errorf("updateSignIntervalTime must be 10-30, got %.0f", p.UpdateSignIntervalTime)
 	}
 	if p.SignCellRangeH < 1 || p.SignCellRangeH > 5 {
@@ -417,14 +416,14 @@ func ValidateNetworkParams(p NetworkParamValues) error {
 	if p.SingGetMax < 10 || p.SingGetMax > 64 {
 		return fmt.Errorf("singGetMax must be 10-64, got %d", p.SingGetMax)
 	}
-	if p.SignDownloadSpan < 10.0 || p.SignDownloadSpan > 30.0 {
+	if !finiteInRange(p.SignDownloadSpan, 10.0, 30.0) {
 		return fmt.Errorf("signDownloadSpan must be 10-30, got %.0f", p.SignDownloadSpan)
 	}
-	if p.SignUpdateSpan < 10.0 || p.SignUpdateSpan > 60.0 {
+	if !finiteInRange(p.SignUpdateSpan, 10.0, 60.0) {
 		return fmt.Errorf("signUpdateSpan must be 10-60, got %.0f", p.SignUpdateSpan)
 	}
 	// Blue
-	if p.ReloadVisitListCoolTime < 5.0 || p.ReloadVisitListCoolTime > 20.0 {
+	if !finiteInRange(p.ReloadVisitListCoolTime, 5.0, 20.0) {
 		return fmt.Errorf("reloadVisitListCoolTime must be 5-20, got %.0f", p.ReloadVisitListCoolTime)
 	}
 	if p.MaxCoopBlueSummonCount < 1 || p.MaxCoopBlueSummonCount > 2 {
@@ -433,10 +432,10 @@ func ValidateNetworkParams(p NetworkParamValues) error {
 	if p.MaxVisitListCount < 1 || p.MaxVisitListCount > 20 {
 		return fmt.Errorf("maxVisitListCount must be 1-20, got %d", p.MaxVisitListCount)
 	}
-	if p.ReloadSearchCoopBlueMin < 5.0 || p.ReloadSearchCoopBlueMin > 30.0 {
+	if !finiteInRange(p.ReloadSearchCoopBlueMin, 5.0, 30.0) {
 		return fmt.Errorf("reloadSearchCoopBlueMin must be 5-30, got %.0f", p.ReloadSearchCoopBlueMin)
 	}
-	if p.ReloadSearchCoopBlueMax < 20.0 || p.ReloadSearchCoopBlueMax > 180.0 {
+	if !finiteInRange(p.ReloadSearchCoopBlueMax, 20.0, 180.0) {
 		return fmt.Errorf("reloadSearchCoopBlueMax must be 20-180, got %.0f", p.ReloadSearchCoopBlueMax)
 	}
 	if p.AllAreaSearchRateCoopBlue < 0 || p.AllAreaSearchRateCoopBlue > 100 {
@@ -452,10 +451,10 @@ func ValidateNetworkParams(p NetworkParamValues) error {
 	if p.VisitorListMax < 1 || p.VisitorListMax > 100 {
 		return fmt.Errorf("visitorListMax must be 1-100, got %d", p.VisitorListMax)
 	}
-	if p.VisitorTimeOutTime < 1.0 || p.VisitorTimeOutTime > 999.0 {
+	if !finiteInRange(p.VisitorTimeOutTime, 1.0, 999.0) {
 		return fmt.Errorf("visitorTimeOutTime must be 1-999, got %.0f", p.VisitorTimeOutTime)
 	}
-	if p.VisitorDownloadSpan < 1.0 || p.VisitorDownloadSpan > 999.0 {
+	if !finiteInRange(p.VisitorDownloadSpan, 1.0, 999.0) {
 		return fmt.Errorf("visitorDownloadSpan must be 1-999, got %.0f", p.VisitorDownloadSpan)
 	}
 
@@ -464,6 +463,10 @@ func ValidateNetworkParams(p NetworkParamValues) error {
 		return err
 	}
 	return nil
+}
+
+func finiteInRange(value, min, max float32) bool {
+	return !math.IsNaN(float64(value)) && !math.IsInf(float64(value), 0) && value >= min && value <= max
 }
 
 // ValidateCrossFieldConstraints checks only the structural invariants that must
@@ -483,8 +486,11 @@ func ValidateCrossFieldConstraints(p NetworkParamValues) error {
 }
 
 // PatchNetworkParams modifies NetworkParam in UserData11 and returns the patched UserData11.
-// Validation is the caller's responsibility (ValidateNetworkParams or ValidateCrossFieldConstraints).
+// It validates both the requested values and the fully encrypted result.
 func PatchNetworkParams(ud11 []byte, patch NetworkParamValues) ([]byte, error) {
+	if err := ValidateNetworkParams(patch); err != nil {
+		return nil, fmt.Errorf("validate network parameters: %w", err)
+	}
 	regBlob, iv, dcxFormat, err := extractRegulation(ud11)
 	if err != nil {
 		return nil, fmt.Errorf("extract regulation: %w", err)
@@ -495,12 +501,16 @@ func PatchNetworkParams(ud11 []byte, patch NetworkParamValues) ([]byte, error) {
 		return nil, fmt.Errorf("decompress DCX: %w", err)
 	}
 
-	paramOffset, _, rowDataOffset, err := findNetworkParamInBND4(bnd4Data)
+	paramOffset, paramSize, rowDataOffset, err := findNetworkParamInBND4(bnd4Data)
 	if err != nil {
 		return nil, fmt.Errorf("find NetworkParam: %w", err)
 	}
+	const requiredRowBytes = offsetVisitorDownloadSpan + 4
+	if rowDataOffset > paramSize || paramSize-rowDataOffset < requiredRowBytes {
+		return nil, fmt.Errorf("NetworkParam row is too short: %d bytes (need %d)", paramSize-rowDataOffset, requiredRowBytes)
+	}
 
-	d := bnd4Data[paramOffset+rowDataOffset:]
+	d := bnd4Data[paramOffset+rowDataOffset : paramOffset+paramSize]
 
 	// Invader
 	binary.LittleEndian.PutUint32(d[offsetMaxBreakInTargets:], uint32(patch.MaxBreakInTargetListCount))
@@ -537,29 +547,12 @@ func PatchNetworkParams(ud11 []byte, patch NetworkParamValues) ([]byte, error) {
 	binary.LittleEndian.PutUint32(d[offsetVisitorTimeOutTime:], math.Float32bits(patch.VisitorTimeOutTime))
 	binary.LittleEndian.PutUint32(d[offsetVisitorDownloadSpan:], math.Float32bits(patch.VisitorDownloadSpan))
 
-	regStart := ud11RegulationOffset(ud11)
+	regStart := ud11UnkSize
 	originalCiphertextLen := len(ud11) - regStart - 16
 
-	var newRegBlob []byte
-	// PS4 saves have no MD5 prefix (regStart == ud11UnkSize), so any recompression of the
-	// ZSTD frame produces different ciphertext that PS4 rejects. Use the rawblock approach:
-	// replace only the ZSTD block(s) containing the patched fields with Raw blocks,
-	// keeping all other blocks byte-for-byte identical to the original encrypted frame.
-	//
-	// PC saves carry a 16-byte MD5 prefix covering the entire regulation blob; we
-	// recalculate the MD5 below, so any valid recompression is accepted on PC.
-	if dcxFormat == dcxFormatZSTD && regStart == ud11UnkSize {
-		firstBND4 := paramOffset + rowDataOffset + offsetSummonTimeoutTime
-		lastBND4 := paramOffset + rowDataOffset + offsetVisitorDownloadSpan + 3
-		newRegBlob, err = patchZSTDStreamRawBlock(regBlob, bnd4Data, firstBND4, lastBND4)
-		if err != nil {
-			return nil, fmt.Errorf("rawblock patch: %w", err)
-		}
-	} else {
-		newRegBlob, err = compressDCX(bnd4Data, dcxFormat)
-		if err != nil {
-			return nil, fmt.Errorf("compress DCX: %w", err)
-		}
+	newRegBlob, err := recompressDCX(regBlob, bnd4Data)
+	if err != nil {
+		return nil, fmt.Errorf("compress DCX: %w", err)
 	}
 
 	if len(newRegBlob) > originalCiphertextLen {
@@ -576,12 +569,12 @@ func PatchNetworkParams(ud11 []byte, patch NetworkParamValues) ([]byte, error) {
 	copy(result, ud11)
 	copy(result[regStart:], reencrypted)
 
-	// PC saves have a 16-byte MD5 prefix at result[0:0x10] covering result[0x10:].
-	// The prefix must be recalculated after patching — the game validates it and
-	// rejects (overwrites from game files) if it doesn't match.
-	if regStart == ud11MD5Size+ud11UnkSize {
-		h := md5.Sum(result[ud11MD5Size:])
-		copy(result[:ud11MD5Size], h[:])
+	verified, err := ReadNetworkParams(result)
+	if err != nil {
+		return nil, fmt.Errorf("verify encrypted result: %w", err)
+	}
+	if *verified != patch {
+		return nil, fmt.Errorf("verify encrypted result: parameter values changed during write-back")
 	}
 
 	return result, nil
@@ -589,22 +582,13 @@ func PatchNetworkParams(ud11 []byte, patch NetworkParamValues) ([]byte, error) {
 
 // --- internal pipeline ---
 
-// ud11RegulationOffset returns the byte offset where regulation blob starts within UserData11.
-// PC saves have a 16-byte MD5 prefix before the unk header; PS4 saves start directly with unk.
-// The unk header always begins with 0x20474552 (" GER").
-func ud11RegulationOffset(ud11 []byte) int {
-	if len(ud11) > ud11MD5Size+ud11UnkSize {
-		if ud11[ud11MD5Size] == 0x20 && ud11[ud11MD5Size+1] == 0x47 {
-			return ud11MD5Size + ud11UnkSize
-		}
-	}
-	return ud11UnkSize
-}
-
 func extractRegulation(ud11 []byte) (decrypted []byte, iv []byte, dcxFormat string, err error) {
-	regStart := ud11RegulationOffset(ud11)
+	regStart := ud11UnkSize
 	if len(ud11) <= regStart+16 {
 		return nil, nil, "", fmt.Errorf("UserData11 too short: %d bytes", len(ud11))
+	}
+	if len(ud11) < 4 || string(ud11[:4]) != " GER" {
+		return nil, nil, "", fmt.Errorf("UserData11 is not a PS4 save (missing " + `" GER"` + " header)")
 	}
 
 	regRaw := ud11[regStart:]
@@ -633,14 +617,23 @@ func extractRegulation(ud11 []byte) (decrypted []byte, iv []byte, dcxFormat stri
 		return nil, nil, "", fmt.Errorf("decrypted regulation too short for format detection")
 	}
 	dcxFormat = string(decrypted[40:44])
-	if dcxFormat != dcxFormatDFLT && dcxFormat != dcxFormatZSTD {
-		return nil, nil, "", fmt.Errorf("unknown DCX format: %q", dcxFormat)
+	if dcxFormat != dcxFormatZSTD {
+		return nil, nil, "", fmt.Errorf("unsupported PS4 DCX format: %q", dcxFormat)
 	}
 
 	return decrypted, iv, dcxFormat, nil
 }
 
 func encryptRegulation(dcxData []byte, iv []byte, originalCiphertextLen int) ([]byte, error) {
+	if len(iv) != aes.BlockSize {
+		return nil, fmt.Errorf("invalid AES IV length: %d", len(iv))
+	}
+	if originalCiphertextLen < 0 || originalCiphertextLen%aes.BlockSize != 0 {
+		return nil, fmt.Errorf("invalid regulation ciphertext capacity: %d", originalCiphertextLen)
+	}
+	if len(dcxData) > originalCiphertextLen {
+		return nil, fmt.Errorf("DCX data (%d bytes) exceeds ciphertext capacity (%d bytes)", len(dcxData), originalCiphertextLen)
+	}
 	plaintext := make([]byte, originalCiphertextLen)
 	copy(plaintext, dcxData)
 
@@ -668,14 +661,13 @@ func decompressDCX(dcxData []byte, format string) ([]byte, error) {
 	compressedSize := int(binary.BigEndian.Uint32(dcxData[32:36]))
 
 	available := len(dcxData) - 76
-	dataLen := compressedSize
-	if dataLen > available {
-		dataLen = available
+	if compressedSize < 0 || compressedSize > available {
+		return nil, fmt.Errorf("DCX compressed size %d exceeds available payload %d", compressedSize, available)
 	}
 
 	switch format {
 	case dcxFormatZSTD:
-		compressed := dcxData[76 : 76+dataLen]
+		compressed := dcxData[76 : 76+compressedSize]
 		decoder, err := zstd.NewReader(bytes.NewReader(compressed))
 		if err != nil {
 			return nil, fmt.Errorf("zstd reader: %w", err)
@@ -685,275 +677,64 @@ func decompressDCX(dcxData []byte, format string) ([]byte, error) {
 		if _, err := io.Copy(buf, decoder); err != nil {
 			return nil, fmt.Errorf("zstd decompress: %w", err)
 		}
+		if buf.Len() != decompressedSize {
+			return nil, fmt.Errorf("DCX decompressed size %d does not match header %d", buf.Len(), decompressedSize)
+		}
 		return buf.Bytes(), nil
 
-	case dcxFormatDFLT:
-		compressed := dcxData[76 : 76+dataLen]
-		if len(compressed) < 2 {
-			return nil, fmt.Errorf("DFLT compressed data too short")
-		}
-		reader := flate.NewReader(bytes.NewReader(compressed[2:]))
-		defer reader.Close()
-		result, err := io.ReadAll(reader)
-		if err != nil {
-			return nil, fmt.Errorf("deflate decompress: %w", err)
-		}
-		return result, nil
-
 	default:
 		return nil, fmt.Errorf("unsupported DCX format: %s", format)
 	}
 }
 
-func compressDCX(bnd4Data []byte, format string) ([]byte, error) {
-	var compressed []byte
-
-	switch format {
-	case dcxFormatZSTD:
-		encoder, err := zstd.NewWriter(nil, zstd.WithEncoderLevel(zstd.SpeedDefault))
-		if err != nil {
-			return nil, fmt.Errorf("zstd encoder: %w", err)
-		}
-		compressed = encoder.EncodeAll(bnd4Data, nil)
-		encoder.Close()
-
-	case dcxFormatDFLT:
-		var buf bytes.Buffer
-		// Write 2-byte zlib header (0x78 0x9C = default compression)
-		buf.Write([]byte{0x78, 0x9C})
-		writer, err := flate.NewWriter(&buf, flate.DefaultCompression)
-		if err != nil {
-			return nil, fmt.Errorf("deflate writer: %w", err)
-		}
-		if _, err := writer.Write(bnd4Data); err != nil {
-			return nil, fmt.Errorf("deflate write: %w", err)
-		}
-		if err := writer.Close(); err != nil {
-			return nil, fmt.Errorf("deflate close: %w", err)
-		}
-		compressed = buf.Bytes()
-
-	default:
-		return nil, fmt.Errorf("unsupported DCX format: %s", format)
+// recompressDCX follows SoulsFormats' ZstdHelper.WriteZstd frame shape: no
+// content-size field, a 64KB window, and no checksum. The PS4 game accepts this
+// shape; generic EncodeAll output and the former raw-block splice do not.
+func recompressDCX(originalDCX, bnd4Data []byte) ([]byte, error) {
+	if len(originalDCX) < 76 {
+		return nil, fmt.Errorf("DCX data too short")
+	}
+	if string(originalDCX[:4]) != dcxMagic || string(originalDCX[40:44]) != dcxFormatZSTD {
+		return nil, fmt.Errorf("invalid PS4 ZSTD DCX header")
 	}
 
-	// Build DCX header
+	var stream bytes.Buffer
+	encoder, err := zstd.NewWriter(&stream,
+		zstd.WithEncoderLevel(zstd.SpeedBestCompression),
+		zstd.WithWindowSize(soulsFormatsWindowSize),
+		zstd.WithEncoderCRC(false),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("zstd encoder: %w", err)
+	}
+	if _, err := encoder.Write(bnd4Data); err != nil {
+		encoder.Close()
+		return nil, fmt.Errorf("zstd encode: %w", err)
+	}
+	if err := encoder.Close(); err != nil {
+		return nil, fmt.Errorf("zstd encode close: %w", err)
+	}
+
+	compressed := stream.Bytes()
+	decoder, err := zstd.NewReader(nil)
+	if err != nil {
+		return nil, fmt.Errorf("zstd self-check decoder: %w", err)
+	}
+	roundTrip, err := decoder.DecodeAll(compressed, nil)
+	decoder.Close()
+	if err != nil {
+		return nil, fmt.Errorf("zstd self-check decompress: %w", err)
+	}
+	if !bytes.Equal(roundTrip, bnd4Data) {
+		return nil, fmt.Errorf("zstd self-check produced different decompressed data")
+	}
+
 	dcx := make([]byte, 76+len(compressed))
-
-	copy(dcx[0:4], []byte(dcxMagic))
-	binary.BigEndian.PutUint32(dcx[4:8], 0x11000)
-	binary.BigEndian.PutUint32(dcx[8:12], 0x18)
-	binary.BigEndian.PutUint32(dcx[12:16], 0x24)
-	binary.BigEndian.PutUint32(dcx[16:20], 0x44)
-	binary.BigEndian.PutUint32(dcx[20:24], 0x4C)
-
-	// DCS section
-	copy(dcx[24:28], []byte("DCS\x00"))
+	copy(dcx, originalDCX[:76])
 	binary.BigEndian.PutUint32(dcx[28:32], uint32(len(bnd4Data)))
 	binary.BigEndian.PutUint32(dcx[32:36], uint32(len(compressed)))
-
-	// DCP section
-	copy(dcx[36:40], []byte("DCP\x00"))
-	copy(dcx[40:44], []byte(format))
-	binary.BigEndian.PutUint32(dcx[44:48], 0x20)
-
-	switch format {
-	case dcxFormatZSTD:
-		dcx[48] = 0x15 // compression level hint
-		// bytes 49-63: zeros
-		binary.BigEndian.PutUint32(dcx[64:68], 0x00010100)
-	case dcxFormatDFLT:
-		dcx[48] = 9  // compression level
-		dcx[52] = 15 // window bits
-		binary.BigEndian.PutUint32(dcx[64:68], 0x00010100)
-	}
-
-	// DCA section
-	copy(dcx[68:72], []byte("DCA\x00"))
-	binary.BigEndian.PutUint32(dcx[72:76], 8)
-
-	// Compressed data
 	copy(dcx[76:], compressed)
-
 	return dcx, nil
-}
-
-// --- ZSTD rawblock patch ---
-
-// zstdBlock holds position and type info for one block within a ZSTD compressed stream.
-type zstdBlock struct {
-	streamStart, streamEnd int
-	btype                  int // 0=Raw, 1=RLE, 2=Compressed
-	last                   bool
-}
-
-// zstdDecompBlockSize is the decompressed size of each ZSTD block in FromSoftware's
-// regulation.bin. FromSoftware encodes with FLUSH_BLOCK every 64 KB of plaintext.
-const zstdDecompBlockSize = 64 * 1024
-
-// patchZSTDStreamRawBlock replaces the ZSTD block(s) covering the BND4 byte range
-// [firstPatchedBND4Offset, lastPatchedBND4Offset] with Raw blocks carrying the
-// modified BND4 payload. All other blocks are preserved byte-for-byte from regBlob.
-// Returns a new DCX blob with an updated compressedSize field in the header.
-//
-// Using Raw blocks avoids full ZSTD recompression, which would produce a frame with
-// different encoder parameters (window size, frame header flags) that PS4 rejects.
-// The patched fields span up to two blocks when the NetworkParam row data straddles
-// a 64 KB boundary.
-func patchZSTDStreamRawBlock(regBlob, bnd4 []byte, firstPatchedBND4Offset, lastPatchedBND4Offset int) ([]byte, error) {
-	if len(regBlob) < 76 {
-		return nil, fmt.Errorf("regBlob too short for DCX header (%d bytes)", len(regBlob))
-	}
-	compSize := int(binary.BigEndian.Uint32(regBlob[32:36]))
-	if 76+compSize > len(regBlob) {
-		return nil, fmt.Errorf("DCX compressedSize %d exceeds regBlob length %d", compSize, len(regBlob))
-	}
-	stream := regBlob[76 : 76+compSize]
-
-	firstBlockIdx := firstPatchedBND4Offset / zstdDecompBlockSize
-	lastBlockIdx := lastPatchedBND4Offset / zstdDecompBlockSize
-
-	// Walk enough blocks: last target block + 2 (to check the block after for Treeless_Literals).
-	blocks, err := walkZSTDBlocks(stream, lastBlockIdx+3)
-	if err != nil {
-		return nil, fmt.Errorf("walkZSTDBlocks: %w", err)
-	}
-	if lastBlockIdx >= len(blocks) {
-		return nil, fmt.Errorf("ZSTD block %d not found (walked %d blocks)", lastBlockIdx, len(blocks))
-	}
-
-	// All target blocks must be Compressed (type 2) or Raw (type 0, from a previous patch).
-	// RLE blocks (type 1) are not expected in regulation.bin.
-	for idx := firstBlockIdx; idx <= lastBlockIdx; idx++ {
-		if b := blocks[idx]; b.btype != 2 && b.btype != 0 {
-			return nil, fmt.Errorf("unexpected ZSTD block type %d at idx %d (want Compressed=2 or Raw=0)", b.btype, idx)
-		}
-	}
-
-	// The block immediately after our replacement range may use Treeless_Literals,
-	// which reuses the Huffman tree from the last Compressed block we are removing.
-	// Replace it with a Raw block too to avoid decompression failure.
-	afterIdx := lastBlockIdx + 1
-	replaceStreamEnd := blocks[lastBlockIdx].streamEnd
-	replaceAfterBlock := false
-	if afterIdx < len(blocks) {
-		nxt := blocks[afterIdx]
-		if nxt.btype == 2 {
-			dataStart := nxt.streamStart + 3
-			if dataStart < len(stream) && stream[dataStart]&0x03 == 3 { // Treeless_Literals
-				replaceAfterBlock = true
-				replaceStreamEnd = nxt.streamEnd
-			}
-		}
-	}
-
-	var newStream bytes.Buffer
-	newStream.Write(stream[:blocks[firstBlockIdx].streamStart])
-
-	// Write raw blocks for the target range.
-	for idx := firstBlockIdx; idx <= lastBlockIdx; idx++ {
-		decompStart := idx * zstdDecompBlockSize
-		decompEnd := decompStart + zstdDecompBlockSize
-		if decompEnd > len(bnd4) {
-			decompEnd = len(bnd4)
-		}
-		newStream.Write(makeRawBlockHeader(decompEnd-decompStart, false))
-		newStream.Write(bnd4[decompStart:decompEnd])
-	}
-
-	// Write raw block for the Treeless successor, if any.
-	if replaceAfterBlock {
-		decompStart := afterIdx * zstdDecompBlockSize
-		decompEnd := decompStart + zstdDecompBlockSize
-		if decompEnd > len(bnd4) {
-			decompEnd = len(bnd4)
-		}
-		newStream.Write(makeRawBlockHeader(decompEnd-decompStart, false))
-		newStream.Write(bnd4[decompStart:decompEnd])
-	}
-
-	newStream.Write(stream[replaceStreamEnd:])
-	newStreamBytes := newStream.Bytes()
-
-	newDCX := make([]byte, 76+len(newStreamBytes))
-	copy(newDCX, regBlob[:76])
-	binary.BigEndian.PutUint32(newDCX[32:36], uint32(len(newStreamBytes)))
-	copy(newDCX[76:], newStreamBytes)
-
-	return newDCX, nil
-}
-
-// walkZSTDBlocks parses the ZSTD frame header and collects block metadata.
-// Stops after maxBlocks blocks or when the last block is reached.
-func walkZSTDBlocks(stream []byte, maxBlocks int) ([]zstdBlock, error) {
-	if len(stream) < 6 {
-		return nil, fmt.Errorf("ZSTD stream too short (%d bytes)", len(stream))
-	}
-	if stream[0] != 0x28 || stream[1] != 0xB5 || stream[2] != 0x2F || stream[3] != 0xFD {
-		return nil, fmt.Errorf("invalid ZSTD magic: %X", stream[:4])
-	}
-
-	fhd := stream[4]
-	singleSeg := (fhd>>5)&1 != 0
-	didFlag := int(fhd & 3)
-	didSizes := [4]int{0, 1, 2, 4}
-	fcsFlag := int((fhd >> 6) & 3)
-	// Content_Size field size when Single_Segment=0: FCS=0→0, 1→2, 2→4, 3→8 bytes.
-	// When Single_Segment=1: FCS=0→1, 1→2, 2→4, 3→8 bytes.
-	fcsSizes := [4]int{0, 2, 4, 8}
-
-	pos := 5
-	if !singleSeg {
-		pos++ // window descriptor byte
-	}
-	pos += didSizes[didFlag]
-	if singleSeg && fcsFlag == 0 {
-		pos++ // 1-byte content size for single-segment with FCS_Flag=0
-	} else {
-		pos += fcsSizes[fcsFlag]
-	}
-
-	var blocks []zstdBlock
-	for pos+3 <= len(stream) && len(blocks) < maxBlocks {
-		hdr := int(stream[pos]) | int(stream[pos+1])<<8 | int(stream[pos+2])<<16
-		last := hdr&1 != 0
-		btype := (hdr >> 1) & 3
-		bsize := hdr >> 3
-		start := pos
-		pos += 3
-
-		var end int
-		switch btype {
-		case 0: // Raw: bsize payload bytes
-			end = pos + bsize
-			pos += bsize
-		case 1: // RLE: 1 byte payload
-			end = pos + 1
-			pos++
-		case 2: // Compressed: bsize payload bytes
-			end = pos + bsize
-			pos += bsize
-		default:
-			return nil, fmt.Errorf("reserved ZSTD block type at stream offset %d", start)
-		}
-
-		blocks = append(blocks, zstdBlock{start, end, btype, last})
-		if last {
-			break
-		}
-	}
-	return blocks, nil
-}
-
-// makeRawBlockHeader returns the 3-byte ZSTD Raw block header for a block of dataSize bytes.
-// Block_Type=0 (Raw), Last_Block=last.
-func makeRawBlockHeader(dataSize int, last bool) []byte {
-	var lastBit uint32
-	if last {
-		lastBit = 1
-	}
-	h := uint32(dataSize)<<3 | lastBit
-	return []byte{byte(h), byte(h >> 8), byte(h >> 16)}
 }
 
 // locateNetworkParam does the full read pipeline and returns the row data slice.
@@ -968,12 +749,17 @@ func locateNetworkParam(ud11 []byte) (rowData []byte, paramOffset int, rowDataOf
 		return nil, 0, 0, err
 	}
 
-	paramOff, _, rowOff, err := findNetworkParamInBND4(bnd4Data)
+	paramOff, paramSize, rowOff, err := findNetworkParamInBND4(bnd4Data)
 	if err != nil {
 		return nil, 0, 0, err
 	}
 
-	return bnd4Data[paramOff+rowOff:], paramOff, rowOff, nil
+	const requiredRowBytes = offsetVisitorDownloadSpan + 4
+	if rowOff > paramSize || paramSize-rowOff < requiredRowBytes {
+		return nil, 0, 0, fmt.Errorf("NetworkParam row is too short: %d bytes (need %d)", paramSize-rowOff, requiredRowBytes)
+	}
+
+	return bnd4Data[paramOff+rowOff : paramOff+paramSize], paramOff, rowOff, nil
 }
 
 // findNetworkParamInBND4 scans BND4 file entries for NetworkParam.param.
@@ -1000,12 +786,13 @@ func findNetworkParamInBND4(bnd4 []byte) (paramOffset int, paramSize int, rowDat
 		}
 
 		if matchesUTF16Name(bnd4, nameOff, targetUTF16) {
-			compSize := int(binary.LittleEndian.Uint64(bnd4[entryOff+8 : entryOff+16]))
+			compSize64 := binary.LittleEndian.Uint64(bnd4[entryOff+8 : entryOff+16])
 			dataOff := int(binary.LittleEndian.Uint32(bnd4[entryOff+24 : entryOff+28]))
 
-			if dataOff+compSize > len(bnd4) {
+			if dataOff > len(bnd4) || compSize64 > uint64(len(bnd4)-dataOff) {
 				return 0, 0, 0, fmt.Errorf("NetworkParam data exceeds BND4 bounds")
 			}
+			compSize := int(compSize64)
 
 			// Parse PARAM to find Row 0 data offset
 			paramData := bnd4[dataOff : dataOff+compSize]
@@ -1036,12 +823,12 @@ func parseParamRowDataOffset(paramData []byte) (int, error) {
 
 	// Row entries start at 0x40 for OffsetParamType + LongDataOffset format
 	// Row format: id(4) + pad(4) + data_offset(8) + name_offset(8) = 24 bytes
-	rowDataOff := int(binary.LittleEndian.Uint64(paramData[0x48:0x50]))
-	if rowDataOff <= 0 || rowDataOff >= len(paramData) {
-		return 0, fmt.Errorf("invalid row data offset: 0x%X", rowDataOff)
+	rowDataOff64 := binary.LittleEndian.Uint64(paramData[0x48:0x50])
+	if rowDataOff64 == 0 || rowDataOff64 >= uint64(len(paramData)) {
+		return 0, fmt.Errorf("invalid row data offset: 0x%X", rowDataOff64)
 	}
 
-	return rowDataOff, nil
+	return int(rowDataOff64), nil
 }
 
 func encodeUTF16LE(s string) []byte {

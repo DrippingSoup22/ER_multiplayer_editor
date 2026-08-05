@@ -1,4 +1,5 @@
 bin/
+dist/
 *.exe
 *.sl2
 memory.dat
