@@ -138,7 +138,9 @@ unsigned program runs. To proceed, select **More info**, then **Run anyway**.
 
 ## License and attribution
 
-GPLv3 — see [LICENSE](LICENSE). The save format code is
+Copyright (C) 2025-2026 DrippingSoup22. Free software under the GNU General
+Public License, version 3 or (at your option) any later version; see
+[LICENSE](LICENSE). The save format code is
 [ER_shared](https://github.com/DrippingSoup22/ER_shared), whose regulation core
 is adapted from the GPLv3
 [EldenRing-SaveForge](https://github.com/oisis/EldenRing-SaveForge) by oisis.

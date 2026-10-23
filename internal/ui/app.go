@@ -161,6 +161,10 @@ func (s *State) update(gtx C) {
 				"field's technical notes.\n\nSome combinations can stop multiplayer from connecting. Nothing is written " +
 				"until you save, and the input file is never changed: keep a backup anyway, and change one group at a time."}
 		}
+		if n := s.hiddenEdits(); !s.advanced && n > 0 {
+			s.setStatus(fmt.Sprintf("%d hidden Advanced field(s) keep their edits and will be saved: turn Advanced on to see "+
+				"them, or Discard edits.", n), false)
+		}
 	}
 	if s.reset.Clicked(gtx) && s.save != nil {
 		s.modal = &modal{title: "Reset to vanilla", confirm: "Reset",
@@ -282,6 +286,17 @@ func (s *State) startSave() {
 		return
 	}
 	write()
+}
+
+// hiddenEdits counts Advanced fields whose value differs from the file's.
+func (s *State) hiddenEdits() int {
+	n := 0
+	for _, f := range netparam.Fields {
+		if f.Advanced && s.save != nil && s.values[f.Key] != s.save.Values[f.Key] {
+			n++
+		}
+	}
+	return n
 }
 
 // changedUnconfirmed counts unconfirmed fields set away from vanilla.

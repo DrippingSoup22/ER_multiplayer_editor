@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	gioui.org v0.10.1
-	github.com/DrippingSoup22/ER_shared v0.1.0
+	github.com/DrippingSoup22/ER_shared v0.1.1
 	github.com/ncruces/zenity v0.10.14
 )
 
