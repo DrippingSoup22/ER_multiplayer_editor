@@ -25,7 +25,7 @@ func save(t *testing.T, env, fallback string) string {
 }
 
 func ps4Save(t *testing.T) string {
-	return save(t, "ER_SAVE", filepath.Join("..", "..", "..", "ER_research", "save_file", "memory-1.17.1.dat"))
+	return save(t, "ER_SAVE", filepath.Join("..", "..", "..", "ER_research", "save_file", "memory-1.17.3.dat"))
 }
 
 // The table is data, so its consistency is checked rather than trusted: every
